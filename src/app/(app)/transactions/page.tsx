@@ -120,23 +120,29 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6 p-2 sm:p-4">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3 rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-5 py-5 text-white shadow-lg shadow-slate-900/20 sm:flex sm:items-end sm:justify-between sm:px-6">
         <div>
-          <p className="text-sm font-medium text-slate-500">Movimientos</p>
-          <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Historial y filtros</h1>
+          <p className="text-sm uppercase tracking-[0.2em] text-slate-200/80">Spending</p>
+          <h1 className="mt-3 text-2xl font-semibold">Registra tu movimiento</h1>
+          <p className="mt-2 max-w-xl text-sm text-slate-100/90">
+            Crea ingresos, gastos o transferencias con una experiencia móvil conocida y clara.
+          </p>
+        </div>
+        <div className="rounded-[28px] bg-white/15 px-4 py-3 text-sm text-white shadow-inner shadow-white/10">
+          {transactions.length} movimientos
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>{editingId ? "Editar movimiento" : "Nuevo movimiento"}</CardTitle>
-          <CardDescription>Registra ingresos, gastos y transferencias con categorías y cuentas.</CardDescription>
+          <CardDescription>Registra ingresos, gastos y transferencias con categoría, cuenta y fecha.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-3" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 value={form.type}
                 onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as TransactionType, categoryId: "" }))}
               >
@@ -150,7 +156,7 @@ export default function TransactionsPage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 placeholder="Importe"
                 value={form.amount}
                 onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
@@ -158,14 +164,14 @@ export default function TransactionsPage() {
             </div>
 
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               placeholder="Descripción"
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
 
             <textarea
-              className="min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="min-h-24 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               placeholder="Notas opcionales"
               value={form.notes}
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
@@ -173,7 +179,7 @@ export default function TransactionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 value={form.accountId}
                 onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
               >
@@ -185,7 +191,7 @@ export default function TransactionsPage() {
                 ))}
               </select>
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 value={form.categoryId}
                 onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
               >
@@ -200,7 +206,7 @@ export default function TransactionsPage() {
 
             {form.type === "TRANSFER" && (
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 value={form.destinationAccountId}
                 onChange={(event) => setForm((current) => ({ ...current, destinationAccountId: event.target.value }))}
               >
@@ -215,14 +221,14 @@ export default function TransactionsPage() {
 
             <input
               type="date"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               value={form.transactionDate}
               onChange={(event) => setForm((current) => ({ ...current, transactionDate: event.target.value }))}
             />
 
             {error && <p className="text-sm text-rose-600">{error}</p>}
-            <div className="flex gap-2">
-              <Button type="submit">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <Button type="submit" className="min-w-[190px]">
                 <PlusCircle className="h-4 w-4" />
                 {editingId ? "Guardar cambios" : "Crear movimiento"}
               </Button>
@@ -238,24 +244,24 @@ export default function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Últimos movimientos</CardTitle>
+          <CardTitle>Historial de transacciones</CardTitle>
           <CardDescription>{loading ? "Cargando..." : `${transactions.length} registros`}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {transactions.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              No hay movimientos aún. Crea el primero para empezar a construir tu historial.
+            <div className="rounded-3xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              Aún no hay transacciones. Registra la primera para ver tu flujo de dinero.
             </div>
           )}
 
           {transactions.map((transaction) => (
-            <div key={transaction.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+            <div key={transaction.id} className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-900 dark:text-slate-100">{transaction.description}</p>
-                <p className="text-sm text-slate-500">{transaction.type} • {transaction.transaction_date}</p>
+                <p className="font-semibold text-slate-950 dark:text-white">{transaction.description}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{transaction.type} • {transaction.transaction_date}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="font-semibold text-slate-950 dark:text-white">
                   {Number(transaction.amount).toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
                 </span>
                 <div className="flex gap-2">

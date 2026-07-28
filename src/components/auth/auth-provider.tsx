@@ -12,6 +12,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: { message: string } | null }>;
   resetPassword: (email: string) => Promise<{ error: { message: string } | null }>;
+  resendConfirmation: (email: string) => Promise<{ error: { message: string } | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -97,6 +98,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? { message: error.message } : null };
   };
 
+  const resendConfirmation = async (email: string) => {
+    if (!supabase) {
+      return { error: { message: "La configuración de Supabase no está disponible." } };
+    }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
+    });
+
+    return { error: error ? { message: error.message } : null };
+  };
+
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -110,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       resetPassword,
+      resendConfirmation,
       signOut,
     }),
     [loading, session, user],

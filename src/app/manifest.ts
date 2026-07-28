@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Aplicación premium de finanzas personales con enfoque mobile-first para iPhone.",
     start_url: "/",
     display: "standalone",
-    background_color: "#020617",
-    theme_color: "#0f172a",
+    background_color: "#f9f5ff",
+    theme_color: "#8b5cf6",
     icons: [
       {
         src: "/icon-192.png",

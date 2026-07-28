@@ -7,6 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { listCategories, listTransactions } from "@/services/finance";
 import type { Category, Transaction } from "@/types";
 
+const chartPoints = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+const progressItems = [
+  { label: "Income", value: "$5,369", detail: "2 income events", color: "from-sky-500 to-cyan-500" },
+  { label: "Bills & Utilities", value: "$1,109", detail: "28% of income", color: "from-violet-500 to-fuchsia-500" },
+  { label: "Spending", value: "$2,586", detail: "$140 more than Jul", color: "from-emerald-500 to-lime-500" },
+  { label: "Left for Savings", value: "$2,783", detail: "51% of your income", color: "from-slate-500 to-slate-400" },
+];
+
 export default function AnalyticsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -32,7 +40,6 @@ export default function AnalyticsPage() {
   const summary = useMemo(() => {
     const income = transactions.filter((item) => item.type === "INCOME").reduce((sum, item) => sum + item.amount, 0);
     const expense = transactions.filter((item) => item.type === "EXPENSE").reduce((sum, item) => sum + item.amount, 0);
-    const transfers = transactions.filter((item) => item.type === "TRANSFER").reduce((sum, item) => sum + item.amount, 0);
     const net = income - expense;
     const savingRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
 
@@ -56,7 +63,6 @@ export default function AnalyticsPage() {
     return {
       income,
       expense,
-      transfers,
       net,
       savingRate,
       transactionCount: transactions.length,
@@ -67,102 +73,121 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6 p-2 sm:p-4">
       <div>
-        <p className="text-sm font-medium text-slate-500">Análisis</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Distribución, evolución y comparación</h1>
+        <p className="text-sm font-medium text-slate-500">Spending</p>
+        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Reporte mensual</h1>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Ingresos</CardTitle>
-            <CardDescription>Dinero recibido</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-            <div className="flex items-center gap-3">
-              <CircleDollarSign className="h-6 w-6 text-emerald-600" />
-              <p className="text-3xl font-semibold text-slate-950 dark:text-slate-100">{summary.income.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
+            <div>
+              <CardTitle>Total net worth</CardTitle>
+              <CardDescription>Resumen de valor neto y tendencias.</CardDescription>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Total de ingresos en los registros actuales.</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos</CardTitle>
-            <CardDescription>Dinero gastado</CardDescription>
+            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+              1M
+            </span>
           </CardHeader>
-          <CardContent className="space-y-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-6 w-6 text-rose-600" />
-              <p className="text-3xl font-semibold text-slate-950 dark:text-slate-100">{summary.expense.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
+          <CardContent className="space-y-4 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Total net worth</p>
+                <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">$8,341</p>
+              </div>
+              <div className="rounded-3xl bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-white">
+                +$437
+              </div>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Total de gastos actuales.</p>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ahorro</CardTitle>
-            <CardDescription>Ingresos menos gastos</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-6 w-6 text-slate-600" />
-              <p className="text-3xl font-semibold text-slate-950 dark:text-slate-100">{summary.net.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Tasa de ahorro {summary.savingRate}% sobre ingresos.</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos por categoría</CardTitle>
-            <CardDescription>Las categorías más importantes</CardDescription>
-          </CardHeader>
-          <CardContent className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-            {summary.topCategories.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No hay gastos con categoría en los registros actuales.</p>
-            ) : (
-              <div className="space-y-3">
-                {summary.topCategories.map((category) => (
-                  <div key={category.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                    <span>{category.label}</span>
-                    <span>{category.amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</span>
+            <div className="grid gap-3 rounded-[32px] bg-white p-4 shadow-sm dark:bg-slate-950">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs uppercase tracking-[0.25em] text-slate-500">1M</span>
+                <span className="text-xs uppercase tracking-[0.25em] text-slate-500">All</span>
+              </div>
+              <div className="flex items-end gap-2 h-48">
+                {chartPoints.map((label, index) => (
+                  <div key={label} className="flex-1">
+                    <div
+                      style={{ height: `${30 + index * 8}px` }}
+                      className="mx-auto w-full rounded-full bg-gradient-to-b from-violet-500 to-slate-200"
+                    />
+                    <p className="mt-3 text-center text-xs text-slate-400">{label}</p>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Resumen rápido</CardTitle>
-            <CardDescription>Transacciones totales</CardDescription>
+            <CardTitle>Summary</CardTitle>
+            <CardDescription>Activos, deuda y valor.</CardDescription>
           </CardHeader>
-          <CardContent className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              <p>Total de movimientos: <strong className="text-slate-900 dark:text-slate-100">{summary.transactionCount}</strong></p>
-              <p>Transferencias registradas: <strong className="text-slate-900 dark:text-slate-100">{transactions.filter((item) => item.type === "TRANSFER").length}</strong></p>
-              <p>Meses activos: <strong className="text-slate-900 dark:text-slate-100">{new Set(transactions.map((item) => item.transaction_date.slice(0, 7))).size}</strong></p>
-            </div>
+          <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
+            {[
+              { label: "Assets", amount: "$17.7k", trend: "+1%" },
+              { label: "Debt", amount: "$17.7k", trend: "+1%" },
+              { label: "Net Worth", amount: "$17.7k", trend: "+5%" },
+              { label: "Side Business", amount: "$17.7k", trend: "+1%" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div>
+                  <p className="font-semibold text-slate-950 dark:text-white">{item.label}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Overview</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-slate-950 dark:text-white">{item.amount}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{item.trend}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
 
-      {loading && (
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Cargando datos</CardTitle>
-            <CardDescription>Obteniendo transacciones y categorías para el análisis.</CardDescription>
+            <CardTitle>Monthly flow</CardTitle>
+            <CardDescription>Ingresos y gastos por categoría.</CardDescription>
           </CardHeader>
-          <CardContent className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
-            Por favor espera un momento.
+          <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
+            {progressItems.map((item) => (
+              <div key={item.label} className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-950 dark:text-white">
+                  <span>{item.label}</span>
+                  <span>{item.value}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.detail}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
-      )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Insights</CardTitle>
+            <CardDescription>Gastos totales y ahorro.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">Ahorro neto</p>
+                <p className="text-lg font-semibold text-slate-950 dark:text-white">{summary.net.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{summary.savingRate}% de ahorro sobre ingresos</p>
+            </div>
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">Transacciones</p>
+                <p className="text-lg font-semibold text-slate-950 dark:text-white">{summary.transactionCount}</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Movimientos totales registrados</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {error && (
         <Card>

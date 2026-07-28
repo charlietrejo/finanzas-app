@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/manifest.webmanifest"];
 const PROTECTED_PATHS = ["/dashboard", "/transactions", "/analytics", "/budgets", "/goals", "/accounts", "/categories", "/settings"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -44,6 +44,8 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
+
+export { proxy as middleware };
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt)).*)"],

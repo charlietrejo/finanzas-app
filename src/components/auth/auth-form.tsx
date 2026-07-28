@@ -11,7 +11,7 @@ type AuthFormMode = "login" | "register" | "forgot";
 
 export function AuthForm({ mode }: { mode: AuthFormMode }) {
   const router = useRouter();
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmation } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -42,7 +42,9 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
           setError(response.error.message);
           return;
         }
-        setSuccess("Cuenta creada. Revisa tu correo si la verificación está habilitada.");
+        setSuccess(
+          "Cuenta creada. Revisa tu correo para confirmar tu cuenta. Si no recibes el mensaje, revisa spam o solicita reenviar.",
+        );
         return;
       }
 
@@ -57,13 +59,36 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) {
+      setError("Escribe tu correo antes de reenviar el enlace.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      const response = await resendConfirmation(email);
+      if (response.error) {
+        setError(response.error.message);
+        return;
+      }
+      setSuccess("Se ha reenviado un enlace seguro a tu correo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       {mode === "register" && (
-        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-          <UserRound className="h-4 w-4" />
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <UserRound className="h-5 w-5" />
           <input
-            className="w-full bg-transparent outline-none"
+            autoComplete="name"
+            className="w-full bg-transparent text-base placeholder:text-slate-400 outline-none"
             placeholder="Nombre completo"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
@@ -71,11 +96,12 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
         </label>
       )}
 
-      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-        <Mail className="h-4 w-4" />
+      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <Mail className="h-5 w-5" />
         <input
           type="email"
-          className="w-full bg-transparent outline-none"
+          autoComplete="email"
+          className="w-full bg-transparent text-base placeholder:text-slate-400 outline-none"
           placeholder="Correo electrónico"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -84,11 +110,12 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
       </label>
 
       {mode !== "forgot" && (
-        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-          <Lock className="h-4 w-4" />
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <Lock className="h-5 w-5" />
           <input
             type="password"
-            className="w-full bg-transparent outline-none"
+            autoComplete={mode === "register" ? "new-password" : "current-password"}
+            className="w-full bg-transparent text-base placeholder:text-slate-400 outline-none"
             placeholder="Contraseña"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -98,13 +125,32 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
         </label>
       )}
 
-      {error && <p className="text-sm text-rose-600">{error}</p>}
-      {success && <p className="text-sm text-emerald-600">{success}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-rose-600">
+          {error}
+        </p>
+      )}
+      {success && (
+        <p role="status" className="text-sm text-emerald-600">
+          {success}
+        </p>
+      )}
 
       <Button className="w-full" type="submit" disabled={loading}>
         {loading ? "Procesando..." : mode === "login" ? "Entrar" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}
         <ArrowRight className="h-4 w-4" />
       </Button>
+
+      {mode === "register" && (
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <p>
+            Si no recibes el correo de confirmación, pulsa el botón para reenviarlo. También revisa la carpeta de spam.
+          </p>
+          <Button type="button" variant="secondary" className="w-full" disabled={loading || !email.trim()} onClick={handleResendConfirmation}>
+            Reenviar enlace de acceso
+          </Button>
+        </div>
+      )}
     </form>
   );
 }
