@@ -1,0 +1,110 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Lock, Mail, UserRound } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/auth-provider";
+
+type AuthFormMode = "login" | "register" | "forgot";
+
+export function AuthForm({ mode }: { mode: AuthFormMode }) {
+  const router = useRouter();
+  const { signIn, signUp, resetPassword } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      if (mode === "login") {
+        const response = await signIn(email, password);
+        if (response.error) {
+          setError(response.error.message);
+          return;
+        }
+        router.replace("/dashboard");
+        return;
+      }
+
+      if (mode === "register") {
+        const response = await signUp(email, password, fullName);
+        if (response.error) {
+          setError(response.error.message);
+          return;
+        }
+        setSuccess("Cuenta creada. Revisa tu correo si la verificación está habilitada.");
+        return;
+      }
+
+      const response = await resetPassword(email);
+      if (response.error) {
+        setError(response.error.message);
+        return;
+      }
+      setSuccess("Se ha enviado el enlace para restablecer tu contraseña.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form className="space-y-5" onSubmit={handleSubmit}>
+      {mode === "register" && (
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <UserRound className="h-4 w-4" />
+          <input
+            className="w-full bg-transparent outline-none"
+            placeholder="Nombre completo"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+          />
+        </label>
+      )}
+
+      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <Mail className="h-4 w-4" />
+        <input
+          type="email"
+          className="w-full bg-transparent outline-none"
+          placeholder="Correo electrónico"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
+      </label>
+
+      {mode !== "forgot" && (
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <Lock className="h-4 w-4" />
+          <input
+            type="password"
+            className="w-full bg-transparent outline-none"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required={mode === "login" || mode === "register"}
+            minLength={6}
+          />
+        </label>
+      )}
+
+      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {success && <p className="text-sm text-emerald-600">{success}</p>}
+
+      <Button className="w-full" type="submit" disabled={loading}>
+        {loading ? "Procesando..." : mode === "login" ? "Entrar" : mode === "register" ? "Crear cuenta" : "Enviar enlace"}
+        <ArrowRight className="h-4 w-4" />
+      </Button>
+    </form>
+  );
+}
