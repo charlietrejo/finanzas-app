@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, PlusCircle, Trash2 } from "lucide-react";
+import Icon from "@/components/ui/icon-material";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,7 +122,7 @@ export default function TransactionsPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div className="space-y-3 rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-5 py-5 text-white shadow-lg shadow-slate-900/20 sm:flex sm:items-end sm:justify-between sm:px-6">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-200/80">Spending</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-slate-200/80">Gastos</p>
           <h1 className="mt-3 text-2xl font-semibold">Registra tu movimiento</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-100/90">
             Crea ingresos, gastos o transferencias con una experiencia móvil conocida y clara.
@@ -142,13 +142,13 @@ export default function TransactionsPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 value={form.type}
                 onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as TransactionType, categoryId: "" }))}
               >
                 {transactionTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {type === "INCOME" ? "Ingreso" : type === "EXPENSE" ? "Gasto" : "Transferencia"}
                   </option>
                 ))}
               </select>
@@ -156,7 +156,7 @@ export default function TransactionsPage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 placeholder="Importe"
                 value={form.amount}
                 onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
@@ -164,14 +164,14 @@ export default function TransactionsPage() {
             </div>
 
             <input
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
               placeholder="Descripción"
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
 
             <textarea
-              className="min-h-24 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="min-h-24 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
               placeholder="Notas opcionales"
               value={form.notes}
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
@@ -179,7 +179,7 @@ export default function TransactionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 value={form.accountId}
                 onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
               >
@@ -191,7 +191,7 @@ export default function TransactionsPage() {
                 ))}
               </select>
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 value={form.categoryId}
                 onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
               >
@@ -206,7 +206,7 @@ export default function TransactionsPage() {
 
             {form.type === "TRANSFER" && (
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 value={form.destinationAccountId}
                 onChange={(event) => setForm((current) => ({ ...current, destinationAccountId: event.target.value }))}
               >
@@ -221,7 +221,7 @@ export default function TransactionsPage() {
 
             <input
               type="date"
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
               value={form.transactionDate}
               onChange={(event) => setForm((current) => ({ ...current, transactionDate: event.target.value }))}
             />
@@ -229,7 +229,7 @@ export default function TransactionsPage() {
             {error && <p className="text-sm text-rose-600">{error}</p>}
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
               <Button type="submit" className="min-w-[190px]">
-                <PlusCircle className="h-4 w-4" />
+                <Icon name="add" className="h-4 w-4" />
                 {editingId ? "Guardar cambios" : "Crear movimiento"}
               </Button>
               {editingId && (
@@ -249,28 +249,28 @@ export default function TransactionsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {transactions.length === 0 && (
-            <div className="rounded-3xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-3xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
               Aún no hay transacciones. Registra la primera para ver tu flujo de dinero.
             </div>
           )}
 
           {transactions.map((transaction) => (
-            <div key={transaction.id} className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
+            <div key={transaction.id} className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-950 dark:text-white">{transaction.description}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{transaction.type} • {transaction.transaction_date}</p>
+                <p className="font-semibold text-slate-950">{transaction.description}</p>
+                <p className="text-sm text-slate-500">{transaction.type === "INCOME" ? "Ingreso" : transaction.type === "EXPENSE" ? "Gasto" : "Transferencia"} • {transaction.transaction_date}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <span className="font-semibold text-slate-950 dark:text-white">
+                <span className="font-semibold text-slate-950">
                   {Number(transaction.amount).toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
                 </span>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => handleEdit(transaction)}>
-                    <Pencil className="h-4 w-4" />
+                    <Icon name="edit" className="h-4 w-4" />
                     Editar
                   </Button>
                   <Button type="button" variant="secondary" size="sm" onClick={() => void handleDelete(transaction.id)}>
-                    <Trash2 className="h-4 w-4" />
+                    <Icon name="delete" className="h-4 w-4" />
                     Eliminar
                   </Button>
                 </div>

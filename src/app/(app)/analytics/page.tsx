@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, CircleDollarSign, TrendingUp } from "lucide-react";
+import Icon from "@/components/ui/icon-material";
+import { translateLabel } from "@/lib/i18n";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listCategories, listTransactions } from "@/services/finance";
@@ -9,10 +10,10 @@ import type { Category, Transaction } from "@/types";
 
 const chartPoints = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
 const progressItems = [
-  { label: "Income", value: "$5,369", detail: "2 income events", color: "from-sky-500 to-cyan-500" },
-  { label: "Bills & Utilities", value: "$1,109", detail: "28% of income", color: "from-violet-500 to-fuchsia-500" },
-  { label: "Spending", value: "$2,586", detail: "$140 more than Jul", color: "from-emerald-500 to-lime-500" },
-  { label: "Left for Savings", value: "$2,783", detail: "51% of your income", color: "from-slate-500 to-slate-400" },
+  { label: "Ingreso", value: "$5,369", detail: "2 eventos de ingreso", color: "from-sky-500 to-cyan-500" },
+  { label: "Facturas y servicios", value: "$1,109", detail: "28% de ingresos", color: "from-violet-500 to-fuchsia-500" },
+  { label: "Gastos", value: "$2,586", detail: "$140 más que Jul", color: "from-emerald-500 to-lime-500" },
+  { label: "Disponible para ahorro", value: "$2,783", detail: "51% de tus ingresos", color: "from-slate-500 to-slate-400" },
 ];
 
 export default function AnalyticsPage() {
@@ -73,16 +74,16 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6 p-2 sm:p-4">
       <div>
-        <p className="text-sm font-medium text-slate-500">Spending</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Reporte mensual</h1>
+        <p className="text-sm font-medium text-slate-500">Gastos</p>
+        <h1 className="text-2xl font-semibold text-slate-950">Reporte mensual</h1>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Total net worth</CardTitle>
-              <CardDescription>Resumen de valor neto y tendencias.</CardDescription>
+              <CardTitle>Patrimonio total</CardTitle>
+              <CardDescription>Resumen de patrimonio y tendencias.</CardDescription>
             </div>
             <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:bg-violet-950 dark:text-violet-300">
               1M
@@ -91,8 +92,8 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-4 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Total net worth</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">$8,341</p>
+                <p className="text-sm text-slate-500">Patrimonio total</p>
+                <p className="mt-2 text-3xl font-semibold text-slate-950">$8,341</p>
               </div>
               <div className="rounded-3xl bg-white px-3 py-2 text-sm text-slate-950 shadow-sm dark:bg-slate-900 dark:text-white">
                 +$437
@@ -102,7 +103,7 @@ export default function AnalyticsPage() {
             <div className="grid gap-3 rounded-[32px] bg-white p-4 shadow-sm dark:bg-slate-950">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-xs uppercase tracking-[0.25em] text-slate-500">1M</span>
-                <span className="text-xs uppercase tracking-[0.25em] text-slate-500">All</span>
+                <span className="text-xs uppercase tracking-[0.25em] text-slate-500">Todo</span>
               </div>
               <div className="flex items-end gap-2 h-48">
                 {chartPoints.map((label, index) => (
@@ -121,24 +122,24 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
-            <CardDescription>Activos, deuda y valor.</CardDescription>
+            <CardTitle>Resumen</CardTitle>
+            <CardDescription>Activos, deuda y patrimonio.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
             {[
-              { label: "Assets", amount: "$17.7k", trend: "+1%" },
-              { label: "Debt", amount: "$17.7k", trend: "+1%" },
-              { label: "Net Worth", amount: "$17.7k", trend: "+5%" },
-              { label: "Side Business", amount: "$17.7k", trend: "+1%" },
+              { label: "Activos", amount: "$17.7k", trend: "+1%" },
+              { label: "Deuda", amount: "$17.7k", trend: "+1%" },
+              { label: "Patrimonio", amount: "$17.7k", trend: "+5%" },
+              { label: "Negocio", amount: "$17.7k", trend: "+1%" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+              <div key={item.label} className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm">
                 <div>
-                  <p className="font-semibold text-slate-950 dark:text-white">{item.label}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Overview</p>
+                  <p className="font-semibold text-slate-950">{item.label}</p>
+                  <p className="text-xs text-slate-500">Resumen</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-slate-950 dark:text-white">{item.amount}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{item.trend}</p>
+                  <p className="font-semibold text-slate-950">{item.amount}</p>
+                  <p className="text-xs text-slate-500">{item.trend}</p>
                 </div>
               </div>
             ))}
@@ -149,7 +150,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly flow</CardTitle>
+            <CardTitle>Flujo mensual</CardTitle>
             <CardDescription>Ingresos y gastos por categoría.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
@@ -173,17 +174,17 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-950/70">
             <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">Ahorro neto</p>
-                <p className="text-lg font-semibold text-slate-950 dark:text-white">{summary.net.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
+                <p className="text-sm font-semibold text-slate-950">Ahorro neto</p>
+                <p className="text-lg font-semibold text-slate-950">{summary.net.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{summary.savingRate}% de ahorro sobre ingresos</p>
+              <p className="mt-1 text-xs text-slate-500">{summary.savingRate}% de ahorro sobre ingresos</p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">Transacciones</p>
-                <p className="text-lg font-semibold text-slate-950 dark:text-white">{summary.transactionCount}</p>
+                <p className="text-sm font-semibold text-slate-950">Transacciones</p>
+                <p className="text-lg font-semibold text-slate-950">{summary.transactionCount}</p>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Movimientos totales registrados</p>
+              <p className="mt-1 text-xs text-slate-500">Movimientos totales registrados</p>
             </div>
           </CardContent>
         </Card>

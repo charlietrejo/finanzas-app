@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Banknote, PiggyBank, Sparkles, Wallet2 } from "lucide-react";
+import Icon from "@/components/ui/icon-material";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,10 @@ const summaryCards = [
 ];
 
 const accountsSummary = [
-  { label: "Checking", amount: "$5,848", color: "bg-sky-100 text-sky-700" },
-  { label: "Card balance", amount: "$2,001", color: "bg-violet-100 text-violet-700" },
-  { label: "Net cash", amount: "$3,847", color: "bg-emerald-100 text-emerald-700" },
-  { label: "Investments", amount: "$0", color: "bg-slate-100 text-slate-700" },
+  { label: "Cuenta corriente", amount: "$5,848", color: "bg-sky-100 text-sky-700" },
+  { label: "Saldo tarjeta", amount: "$2,001", color: "bg-violet-100 text-violet-700" },
+  { label: "Efectivo neto", amount: "$3,847", color: "bg-emerald-100 text-emerald-700" },
+  { label: "Inversiones", amount: "$0", color: "bg-slate-100 text-slate-700" },
 ];
 
 export default function DashboardPage() {
@@ -28,9 +28,9 @@ export default function DashboardPage() {
               <p className="text-sm opacity-90">Resumen</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">$3,298</h1>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-3xl bg-white/15 px-3 py-2 text-sm text-white backdrop-blur">
-              <Sparkles className="h-4 w-4" />
-              $98 below avg. spend
+              <div className="inline-flex items-center gap-2 rounded-3xl bg-white/15 px-3 py-2 text-sm text-white backdrop-blur">
+              <Icon name="sparkles" className="h-4 w-4" />
+              $98 por debajo del gasto promedio
             </div>
           </div>
 
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {accountsSummary.map((item) => (
-              <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-slate-900">
                 <p className="text-sm font-medium">{item.label}</p>
                 <p className="mt-2 text-lg font-semibold">{item.amount}</p>
               </div>
@@ -66,9 +66,9 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4 flex justify-end">
             <Link href="/transactions">
-              <Button className="bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950">
+              <Button className="bg-slate-950 text-white hover:bg-slate-800">
                 Registrar movimiento
-                <ArrowRight className="h-4 w-4" />
+                <Icon name="arrow_right" className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -87,13 +87,13 @@ export default function DashboardPage() {
           <CardContent>
             <div className="grid gap-3">
               <div className="space-y-3 rounded-[28px] bg-slate-50 p-4 dark:bg-slate-900/70">
-                {['Income', 'Bills & Utilities', 'Spending', 'Left for Savings', 'Payment'].map((item, index) => (
+                {['Ingreso', 'Facturas y servicios', 'Gastos', 'Disponible para ahorro', 'Pago'].map((item, index) => (
                   <div key={item} className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{item}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{index === 0 ? '2 income events' : index === 2 ? '$140 more than Jul' : `${index + 1} event`}</p>
+                      <p className="text-sm font-semibold text-slate-900">{item}</p>
+                      <p className="text-sm text-slate-500">{index === 0 ? '2 eventos' : index === 2 ? '$140 más que Jul' : `${index + 1} evento`}</p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{index === 0 ? '$5,369' : index === 1 ? '$1,109' : index === 2 ? '$2,586' : index === 3 ? '$2,783' : '$5,369'}</p>
+                    <p className="text-sm font-semibold text-slate-900">{index === 0 ? '$5,369' : index === 1 ? '$1,109' : index === 2 ? '$2,586' : index === 3 ? '$2,783' : '$5,369'}</p>
                   </div>
                 ))}
               </div>

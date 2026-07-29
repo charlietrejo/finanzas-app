@@ -41,7 +41,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+      <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons" />
+      </head>
+      <body className="min-h-full bg-slate-50 text-slate-950">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

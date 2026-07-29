@@ -84,7 +84,7 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       {mode === "register" && (
-        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700">
           <UserRound className="h-5 w-5" />
           <input
             autoComplete="name"
@@ -96,7 +96,7 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
         </label>
       )}
 
-      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+      <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700">
         <Mail className="h-5 w-5" />
         <input
           type="email"
@@ -110,7 +110,7 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
       </label>
 
       {mode !== "forgot" && (
-        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-700">
           <Lock className="h-5 w-5" />
           <input
             type="password"
@@ -142,7 +142,7 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
       </Button>
 
       {mode === "register" && (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           <p>
             Si no recibes el correo de confirmación, pulsa el botón para reenviarlo. También revisa la carpeta de spam.
           </p>

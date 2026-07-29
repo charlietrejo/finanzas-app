@@ -18,7 +18,7 @@ export function MobileNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className={cn("fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/92 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92", className)}>
+    <nav className={cn("fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/92 px-3 py-3 backdrop-blur", className)}>
       <div className="mx-auto flex max-w-md items-center justify-between gap-2">
         {items.map((item) => {
           const Icon = item.icon;
@@ -33,8 +33,8 @@ export function MobileNav({ className }: { className?: string }) {
                 isActive
                   ? item.primary
                     ? "bg-gradient-to-br from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-sky-500/20"
-                    : "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                    : "bg-slate-950 text-white"
+                  : "text-slate-600 hover:bg-slate-100",
                 item.primary && "rounded-full"
               )}
               aria-label={item.label}

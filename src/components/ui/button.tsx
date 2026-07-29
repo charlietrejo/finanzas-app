@@ -10,12 +10,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20 hover:from-sky-600 hover:to-fuchsia-600 dark:shadow-black/20",
+          "bg-gradient-to-r from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20 hover:from-sky-600 hover:to-fuchsia-600",
         secondary:
-          "bg-white text-slate-950 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
+          "bg-white text-slate-950 hover:bg-slate-100",
         outline:
-          "border border-slate-200 bg-transparent text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800",
-        ghost: "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800",
+          "border border-slate-200 bg-transparent text-slate-900 hover:bg-slate-50",
+        ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
       },
       size: {
         default: "h-11 px-4 py-2",
