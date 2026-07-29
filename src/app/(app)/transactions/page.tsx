@@ -179,29 +179,40 @@ export default function TransactionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
-                value={form.accountId}
-                onChange={(event) => setForm((current) => ({ ...current, accountId: event.target.value }))}
-              >
-                <option value="">Selecciona una cuenta</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
-                value={form.categoryId}
-                onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
-              >
-                <option value="">Sin categoría</option>
-                {filteredCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+  value={form.accountId}
+  onChange={(event) =>
+    setForm((current) => ({
+      ...current,
+      accountId: event.target.value,
+    }))
+  }
+>
+  <option value="">Selecciona una cuenta</option>
+  {accounts.map((account) => (
+    <option key={account.id} value={account.id}>
+      {account.name}
+    </option>
+  ))}
+</select>
+
+<select
+  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+  value={form.categoryId}
+  onChange={(event) =>
+    setForm((current) => ({
+      ...current,
+      categoryId: event.target.value,
+    }))
+  }
+>
+  <option value="">Selecciona una categoría</option>
+  {filteredCategories.map((category) => (
+    <option key={category.id} value={category.id}>
+      {category.name}
+    </option>
+  ))}
+</select>
             </div>
 
             {form.type === "TRANSFER" && (
