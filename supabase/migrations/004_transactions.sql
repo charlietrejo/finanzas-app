@@ -14,22 +14,44 @@ create table if not exists public.transactions (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists transactions_user_id_idx on public.transactions (user_id);
-create index if not exists transactions_transaction_date_idx on public.transactions (transaction_date);
-create index if not exists transactions_category_id_idx on public.transactions (category_id);
-create index if not exists transactions_account_id_idx on public.transactions (account_id);
-create index if not exists transactions_type_idx on public.transactions (type);
+create index if not exists transactions_user_id_idx
+on public.transactions (user_id);
+
+create index if not exists transactions_transaction_date_idx
+on public.transactions (transaction_date);
+
+create index if not exists transactions_category_id_idx
+on public.transactions (category_id);
+
+create index if not exists transactions_account_id_idx
+on public.transactions (account_id);
+
+create index if not exists transactions_type_idx
+on public.transactions (type);
 
 alter table public.transactions enable row level security;
 
-create policy if not exists transactions_select_own on public.transactions
-  for select using (auth.uid() = user_id);
+drop policy if exists transactions_select_own on public.transactions;
+create policy transactions_select_own
+on public.transactions
+for select
+using (auth.uid() = user_id);
 
-create policy if not exists transactions_insert_own on public.transactions
-  for insert with check (auth.uid() = user_id);
+drop policy if exists transactions_insert_own on public.transactions;
+create policy transactions_insert_own
+on public.transactions
+for insert
+with check (auth.uid() = user_id);
 
-create policy if not exists transactions_update_own on public.transactions
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists transactions_update_own on public.transactions;
+create policy transactions_update_own
+on public.transactions
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
-create policy if not exists transactions_delete_own on public.transactions
-  for delete using (auth.uid() = user_id);
+drop policy if exists transactions_delete_own on public.transactions;
+create policy transactions_delete_own
+on public.transactions
+for delete
+using (auth.uid() = user_id);

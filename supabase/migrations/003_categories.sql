@@ -10,23 +10,41 @@ create table if not exists public.categories (
   created_at timestamptz not null default now()
 );
 
-create index if not exists categories_user_id_idx on public.categories (user_id);
-create index if not exists categories_type_idx on public.categories (type);
-create index if not exists categories_parent_id_idx on public.categories (parent_id);
+create index if not exists categories_user_id_idx
+on public.categories (user_id);
+
+create index if not exists categories_type_idx
+on public.categories (type);
+
+create index if not exists categories_parent_id_idx
+on public.categories (parent_id);
 
 alter table public.categories enable row level security;
 
-create policy if not exists categories_select_all_for_authenticated on public.categories
-  for select using (auth.role() = 'authenticated');
+drop policy if exists categories_select_all_for_authenticated on public.categories;
+create policy categories_select_all_for_authenticated
+on public.categories
+for select
+using (auth.role() = 'authenticated');
 
-create policy if not exists categories_insert_own on public.categories
-  for insert with check (auth.uid() = user_id or user_id is null);
+drop policy if exists categories_insert_own on public.categories;
+create policy categories_insert_own
+on public.categories
+for insert
+with check (auth.uid() = user_id or user_id is null);
 
-create policy if not exists categories_update_own on public.categories
-  for update using (auth.uid() = user_id or user_id is null) with check (auth.uid() = user_id or user_id is null);
+drop policy if exists categories_update_own on public.categories;
+create policy categories_update_own
+on public.categories
+for update
+using (auth.uid() = user_id or user_id is null)
+with check (auth.uid() = user_id or user_id is null);
 
-create policy if not exists categories_delete_own on public.categories
-  for delete using (auth.uid() = user_id or user_id is null);
+drop policy if exists categories_delete_own on public.categories;
+create policy categories_delete_own
+on public.categories
+for delete
+using (auth.uid() = user_id or user_id is null);
 
 insert into public.categories (id, user_id, name, type, icon, color, is_default)
 values

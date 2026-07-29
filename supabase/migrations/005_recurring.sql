@@ -15,20 +15,38 @@ create table if not exists public.recurring_transactions (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists recurring_transactions_user_id_idx on public.recurring_transactions (user_id);
-create index if not exists recurring_transactions_next_occurrence_idx on public.recurring_transactions (next_occurrence);
-create index if not exists recurring_transactions_active_idx on public.recurring_transactions (active);
+create index if not exists recurring_transactions_user_id_idx
+on public.recurring_transactions (user_id);
+
+create index if not exists recurring_transactions_next_occurrence_idx
+on public.recurring_transactions (next_occurrence);
+
+create index if not exists recurring_transactions_active_idx
+on public.recurring_transactions (active);
 
 alter table public.recurring_transactions enable row level security;
 
-create policy if not exists recurring_select_own on public.recurring_transactions
-  for select using (auth.uid() = user_id);
+drop policy if exists recurring_select_own on public.recurring_transactions;
+create policy recurring_select_own
+on public.recurring_transactions
+for select
+using (auth.uid() = user_id);
 
-create policy if not exists recurring_insert_own on public.recurring_transactions
-  for insert with check (auth.uid() = user_id);
+drop policy if exists recurring_insert_own on public.recurring_transactions;
+create policy recurring_insert_own
+on public.recurring_transactions
+for insert
+with check (auth.uid() = user_id);
 
-create policy if not exists recurring_update_own on public.recurring_transactions
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists recurring_update_own on public.recurring_transactions;
+create policy recurring_update_own
+on public.recurring_transactions
+for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
-create policy if not exists recurring_delete_own on public.recurring_transactions
-  for delete using (auth.uid() = user_id);
+drop policy if exists recurring_delete_own on public.recurring_transactions;
+create policy recurring_delete_own
+on public.recurring_transactions
+for delete
+using (auth.uid() = user_id);
