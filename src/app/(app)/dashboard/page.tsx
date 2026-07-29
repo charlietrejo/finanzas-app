@@ -41,14 +41,32 @@ export default function DashboardPage() {
       currency: "MXN",
     });
 
+  const accountTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      CASH: "Efectivo",
+      BANK: "Banco",
+      CREDIT_CARD: "Tarjeta de crédito",
+      SAVINGS: "Ahorro",
+      INVESTMENT: "Inversión",
+      OTHER: "Otro",
+    };
+
+    return types[type] ?? type;
+  };
+
   return (
     <div className="space-y-6 p-2 sm:p-4">
+
       <Card className="overflow-hidden rounded-[32px] p-0">
+
         <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-5 py-6 text-white sm:px-6">
-          
+
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm opacity-90">Resumen</p>
+              <p className="text-sm opacity-90">
+                Resumen
+              </p>
+
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">
                 {formatMoney(totalBalance)}
               </h1>
@@ -62,6 +80,7 @@ export default function DashboardPage() {
 
 
           <div className="mt-6 h-56 rounded-[32px] bg-white/10 p-4 text-sm">
+
             <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/80">
               <span>Feb</span>
               <span>Jul</span>
@@ -69,6 +88,7 @@ export default function DashboardPage() {
 
             <div className="relative mt-4 h-full">
               <div className="absolute inset-x-0 bottom-0 grid grid-cols-6 gap-3">
+
                 {Array.from({ length: 6 }).map((_, index) => (
                   <span
                     key={index}
@@ -87,23 +107,37 @@ export default function DashboardPage() {
                     }`}
                   />
                 ))}
+
               </div>
             </div>
+
           </div>
+
         </div>
 
 
-        <div className="space-y-3 bg-white px-5 py-5 sm:px-6">
+        <div className="space-y-4 bg-white px-5 py-5 sm:px-6">
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-slate-500">
-              Cuentas registradas
-            </p>
 
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                Mis cuentas
+              </p>
+
+              <p className="text-xs text-slate-400">
+                Administra tus bancos, efectivo e inversiones
+              </p>
+            </div>
+
+
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
               {accounts.length}
             </span>
+
           </div>
+
 
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -114,134 +148,186 @@ export default function DashboardPage() {
               </p>
             )}
 
+
             {!loading && accounts.length === 0 && (
               <p className="text-sm text-slate-500">
-                No tienes cuentas creadas todavía.
+                Todavía no tienes cuentas registradas.
               </p>
             )}
 
 
+
             {accounts.map((account) => (
+
               <div
                 key={account.id}
-                className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-slate-900"
+                className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
               >
-                <p className="text-sm font-medium">
+
+                <p className="font-semibold text-slate-900">
                   {account.name}
                 </p>
 
-                <p className="mt-2 text-lg font-semibold">
+
+                <p className="mt-2 text-lg font-semibold text-slate-900">
                   {formatMoney(Number(account.current_balance))}
                 </p>
 
+
                 <p className="mt-1 text-xs text-slate-500">
-                  {account.type}
+                  {accountTypeLabel(account.type)}
                 </p>
+
               </div>
+
             ))}
 
           </div>
 
 
-          <div className="mt-4 flex justify-end">
-            <Link href="/transactions">
-              <Button className="bg-slate-700 text-white hover:bg-slate-800">
-                Registrar movimiento
-                <Icon name="arrow_right" className="h-4 w-4" />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+
+
+            <Link href="/accounts">
+
+              <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700">
+
+                <Icon name="add" className="h-4 w-4" />
+
+                Agregar cuenta
+
               </Button>
+
             </Link>
+
+
+
+            <Link href="/transactions">
+
+              <Button
+                variant="outline"
+                className="w-full"
+              >
+
+                Registrar movimiento
+
+                <Icon name="arrow_right" className="h-4 w-4" />
+
+              </Button>
+
+            </Link>
+
+
           </div>
 
+
         </div>
+
 
       </Card>
 
 
 
+
+
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
 
+
         <Card>
+
           <CardHeader>
-            <div>
-              <CardTitle>Gasto mensual</CardTitle>
-              <CardDescription>
-                Visualiza el gasto frente a ingresos en el periodo.
-              </CardDescription>
-            </div>
+
+            <CardTitle>
+              Gasto mensual
+            </CardTitle>
+
+            <CardDescription>
+              Visualiza el gasto frente a ingresos en el periodo.
+            </CardDescription>
 
             <Badge className="bg-sky-50 text-sky-700">
               Nuevo
             </Badge>
+
           </CardHeader>
 
 
           <CardContent>
+
             <div className="rounded-[28px] bg-slate-50 p-4 text-sm text-slate-500">
               Próximamente conectado con transacciones.
             </div>
+
           </CardContent>
+
         </Card>
 
 
 
+
+
         <Card>
+
           <CardHeader>
-            <CardTitle>Saldo neto</CardTitle>
+
+            <CardTitle>
+              Saldo neto
+            </CardTitle>
+
             <CardDescription>
               Resumen rápido de patrimonio y tendencias.
             </CardDescription>
+
           </CardHeader>
+
 
 
           <CardContent>
 
             <div className="space-y-4 rounded-[28px] bg-slate-50 p-4">
 
-              <div className="rounded-3xl bg-white p-4 text-slate-900 shadow-sm">
+
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
 
                 <p className="text-sm text-slate-500">
                   Patrimonio actual
                 </p>
 
+
                 <p className="mt-2 text-3xl font-semibold">
                   {formatMoney(totalBalance)}
+                </p>
+
+
+              </div>
+
+
+
+              <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4">
+
+                <p className="font-semibold">
+                  Cuentas activas
+                </p>
+
+                <p className="font-semibold">
+                  {accounts.length}
                 </p>
 
               </div>
 
 
-              <div className="space-y-3">
-
-                <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4">
-                  <p className="font-semibold">
-                    Activos
-                  </p>
-
-                  <p className="font-semibold">
-                    {formatMoney(totalBalance)}
-                  </p>
-                </div>
-
-
-                <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4">
-                  <p className="font-semibold">
-                    Cuentas
-                  </p>
-
-                  <p className="font-semibold">
-                    {accounts.length}
-                  </p>
-                </div>
-
-              </div>
 
             </div>
 
           </CardContent>
 
+
         </Card>
 
+
       </div>
+
 
     </div>
   );
