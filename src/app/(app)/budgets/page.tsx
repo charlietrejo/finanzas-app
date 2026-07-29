@@ -111,7 +111,7 @@ export default function BudgetsPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div>
         <p className="text-sm font-medium text-slate-500">Presupuestos</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Límites por categoría</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Límites por categoría</h1>
       </div>
 
       <Card>
@@ -119,11 +119,11 @@ export default function BudgetsPage() {
           <CardTitle>{editingId ? "Editar presupuesto" : "Nuevo presupuesto"}</CardTitle>
           <CardDescription>Establece límites por categoría y periodo.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
           <Wallet className="h-6 w-6 text-slate-600" />
           <div className="w-full">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Crea presupuestos por categoría</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Controla tus límites de gasto con periodos definidos.</p>
+            <p className="text-sm font-semibold text-slate-900">Crea presupuestos por categoría</p>
+            <p className="text-sm text-slate-500">Controla tus límites de gasto con periodos definidos.</p>
           </div>
         </CardContent>
       </Card>
@@ -136,7 +136,7 @@ export default function BudgetsPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.categoryId}
               onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
             >
@@ -151,13 +151,13 @@ export default function BudgetsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Monto del presupuesto"
                 value={form.amount}
                 onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
               />
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 value={form.period}
                 onChange={(event) => setForm((current) => ({ ...current, period: event.target.value as typeof emptyForm.period }))}
               >
@@ -170,7 +170,7 @@ export default function BudgetsPage() {
             </div>
             <input
               type="date"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.startDate}
               onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))}
             />
@@ -197,16 +197,16 @@ export default function BudgetsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {budgets.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
               Aún no tienes presupuestos. Crea uno para vigilar tus gastos.
             </div>
           ) : (
             budgets.map((budget) => {
               const category = categories.find((item) => item.id === budget.category_id);
               return (
-                <div key={budget.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+                <div key={budget.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{category?.name ?? "Categoría eliminada"}</p>
+                    <p className="font-semibold text-slate-900">{category?.name ?? "Categoría eliminada"}</p>
                     <p className="text-sm text-slate-500">{budget.period} • inicia {budget.start_date}</p>
                   </div>
                   <div className="flex gap-2">
@@ -226,7 +226,7 @@ export default function BudgetsPage() {
 
       {error && (
         <Card>
-          <CardContent className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950 dark:text-rose-200">
+          <CardContent className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             {error}
           </CardContent>
         </Card>
@@ -234,3 +234,5 @@ export default function BudgetsPage() {
     </div>
   );
 }
+
+

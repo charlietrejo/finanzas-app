@@ -95,7 +95,7 @@ export default function AccountsPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div>
         <p className="text-sm font-medium text-slate-500">Cuentas</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Múltiples fuentes de dinero</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Múltiples fuentes de dinero</h1>
       </div>
 
       <Card>
@@ -106,13 +106,13 @@ export default function AccountsPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               placeholder="Nombre de la cuenta"
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             />
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.type}
               onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as AccountType }))}
             >
@@ -126,7 +126,7 @@ export default function AccountsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Saldo inicial"
                 value={form.initialBalance}
                 onChange={(event) => setForm((current) => ({ ...current, initialBalance: event.target.value }))}
@@ -134,7 +134,7 @@ export default function AccountsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Saldo actual"
                 value={form.currentBalance}
                 onChange={(event) => setForm((current) => ({ ...current, currentBalance: event.target.value }))}
@@ -163,15 +163,15 @@ export default function AccountsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {accounts.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
               Aún no hay cuentas. Crea la primera para organizar tus recursos.
             </div>
           )}
 
           {accounts.map((account) => (
-            <div key={account.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+            <div key={account.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-900 dark:text-slate-100">{account.name}</p>
+                <p className="font-semibold text-slate-900">{account.name}</p>
                 <p className="text-sm text-slate-500">{account.type} • saldo actual {account.current_balance.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
               </div>
               <div className="flex gap-2">
@@ -191,3 +191,5 @@ export default function AccountsPage() {
     </div>
   );
 }
+
+

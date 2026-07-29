@@ -98,7 +98,7 @@ export default function CategoriesPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div>
         <p className="text-sm font-medium text-slate-500">Categorías</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Jerarquías y personalización</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Jerarquías y personalización</h1>
       </div>
 
       <Card>
@@ -109,13 +109,13 @@ export default function CategoriesPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               placeholder="Nombre de la categoría"
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             />
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.type}
               onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as CategoryType }))}
             >
@@ -126,7 +126,7 @@ export default function CategoriesPage() {
               ))}
             </select>
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.parentId}
               onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}
             >
@@ -141,13 +141,13 @@ export default function CategoriesPage() {
             </select>
             <div className="grid gap-3 sm:grid-cols-2">
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Icono"
                 value={form.icon}
                 onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))}
               />
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Color"
                 value={form.color}
                 onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))}
@@ -176,15 +176,15 @@ export default function CategoriesPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {categories.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
               No hay categorías aún. Crea la primera para clasificar mejor tus movimientos.
             </div>
           )}
 
           {categories.map((category) => (
-            <div key={category.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+            <div key={category.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-900 dark:text-slate-100">{category.name}</p>
+                <p className="font-semibold text-slate-900">{category.name}</p>
                 <p className="text-sm text-slate-500">{category.type} {category.parent_id ? `• padre ${category.parent_id}` : "• raíz"}</p>
               </div>
               <div className="flex gap-2">
@@ -204,3 +204,5 @@ export default function CategoriesPage() {
     </div>
   );
 }
+
+

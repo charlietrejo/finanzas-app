@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default:
           "bg-gradient-to-r from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20 hover:from-sky-600 hover:to-fuchsia-600",
         secondary:
-          "bg-white text-slate-950 hover:bg-slate-100",
+          "bg-white text-slate-900 hover:bg-slate-100",
         outline:
           "border border-slate-200 bg-transparent text-slate-900 hover:bg-slate-50",
         ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
@@ -53,3 +53,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
+

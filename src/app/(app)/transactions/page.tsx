@@ -257,11 +257,11 @@ export default function TransactionsPage() {
           {transactions.map((transaction) => (
             <div key={transaction.id} className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold text-slate-950">{transaction.description}</p>
+                <p className="font-semibold text-slate-900">{transaction.description}</p>
                 <p className="text-sm text-slate-500">{transaction.type === "INCOME" ? "Ingreso" : transaction.type === "EXPENSE" ? "Gasto" : "Transferencia"} • {transaction.transaction_date}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <span className="font-semibold text-slate-950">
+                <span className="font-semibold text-slate-900">
                   {Number(transaction.amount).toLocaleString("es-MX", { style: "currency", currency: "MXN" })}
                 </span>
                 <div className="flex gap-2">
@@ -282,3 +282,4 @@ export default function TransactionsPage() {
     </div>
   );
 }
+

@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <ShieldCheck className="h-4 w-4" />
               Seguridad reforzada
             </div>
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900">
               Tu cuenta financiera, protegida desde el primer paso.
             </h1>
             <p className="mt-3 max-w-lg text-base leading-7 text-slate-600">
@@ -30,3 +30,4 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     </div>
   );
 }
+

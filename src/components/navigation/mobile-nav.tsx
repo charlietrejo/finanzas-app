@@ -33,7 +33,7 @@ export function MobileNav({ className }: { className?: string }) {
                 isActive
                   ? item.primary
                     ? "bg-gradient-to-br from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-sky-500/20"
-                    : "bg-slate-950 text-white"
+                      : "bg-slate-200 text-slate-900"
                   : "text-slate-600 hover:bg-slate-100",
                 item.primary && "rounded-full"
               )}

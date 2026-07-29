@@ -44,9 +44,10 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons" />
       </head>
-      <body className="min-h-full bg-slate-50 text-slate-950">
+      <body className="min-h-full bg-slate-50 text-slate-900">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
+

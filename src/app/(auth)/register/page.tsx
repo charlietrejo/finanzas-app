@@ -7,7 +7,7 @@ export default function RegisterPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium text-slate-500">Registro</p>
-        <h2 className="mt-2 text-2xl font-semibold text-slate-950">Crea tu cuenta</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-slate-900">Crea tu cuenta</h2>
       </div>
 
       <AuthForm mode="register" />
@@ -21,3 +21,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

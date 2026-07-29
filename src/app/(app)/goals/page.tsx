@@ -101,7 +101,7 @@ export default function GoalsPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div>
         <p className="text-sm font-medium text-slate-500">Metas</p>
-        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Ahorro y objetivos financieros</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Ahorro y objetivos financieros</h1>
       </div>
 
       <Card>
@@ -109,11 +109,11 @@ export default function GoalsPage() {
           <CardTitle>{editingId ? "Editar meta" : "Nueva meta"}</CardTitle>
           <CardDescription>Define objetivos y visualiza el avance.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
           <Target className="h-6 w-6 text-slate-600" />
           <div className="w-full">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Registra tus metas de ahorro</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Visualiza el progreso hacia cada objetivo.</p>
+            <p className="text-sm font-semibold text-slate-900">Registra tus metas de ahorro</p>
+            <p className="text-sm text-slate-500">Visualiza el progreso hacia cada objetivo.</p>
           </div>
         </CardContent>
       </Card>
@@ -126,7 +126,7 @@ export default function GoalsPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               placeholder="Nombre de la meta"
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -135,7 +135,7 @@ export default function GoalsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Monto objetivo"
                 value={form.targetAmount}
                 onChange={(event) => setForm((current) => ({ ...current, targetAmount: event.target.value }))}
@@ -143,7 +143,7 @@ export default function GoalsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
                 placeholder="Monto actual"
                 value={form.currentAmount}
                 onChange={(event) => setForm((current) => ({ ...current, currentAmount: event.target.value }))}
@@ -151,7 +151,7 @@ export default function GoalsPage() {
             </div>
             <input
               type="date"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
               value={form.targetDate}
               onChange={(event) => setForm((current) => ({ ...current, targetDate: event.target.value }))}
             />
@@ -178,25 +178,25 @@ export default function GoalsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {goals.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
               Aún no hay metas. Crea una para empezar a ahorrar con rumbo.
             </div>
           ) : (
             goals.map((goal) => {
               const progress = goal.target_amount > 0 ? Math.min((goal.current_amount / goal.target_amount) * 100, 100) : 0;
               return (
-                <div key={goal.id} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
+                <div key={goal.id} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-100">{goal.name}</p>
+                      <p className="font-semibold text-slate-900">{goal.name}</p>
                       <p className="text-sm text-slate-500">Fecha objetivo: {goal.target_date ?? "Sin fecha"}</p>
                     </div>
-                    <div className="text-right text-sm text-slate-600 dark:text-slate-300">
+                    <div className="text-right text-sm text-slate-600">
                       <p>{goal.current_amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })} / {goal.target_amount.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</p>
                       <p>{Math.round(progress)}%</p>
                     </div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                     <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
                   </div>
                   <div className="flex gap-2">
@@ -216,7 +216,7 @@ export default function GoalsPage() {
 
       {error && (
         <Card>
-          <CardContent className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-700 dark:bg-rose-950 dark:text-rose-200">
+          <CardContent className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             {error}
           </CardContent>
         </Card>
@@ -224,3 +224,5 @@ export default function GoalsPage() {
     </div>
   );
 }
+
+

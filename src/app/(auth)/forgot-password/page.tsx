@@ -7,7 +7,7 @@ export default function ForgotPasswordPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium text-slate-500">Recuperación</p>
-        <h2 className="mt-2 text-2xl font-semibold text-slate-950">Recupera tu acceso</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-slate-900">Recupera tu acceso</h2>
       </div>
 
       <p className="text-sm leading-6 text-slate-600">
@@ -16,9 +16,10 @@ export default function ForgotPasswordPage() {
 
       <AuthForm mode="forgot" />
 
-      <Link href="/login" className="text-sm font-medium text-slate-700 hover:text-slate-950">
+      <Link href="/login" className="text-sm font-medium text-slate-700 hover:text-slate-900">
         Volver a iniciar sesión
       </Link>
     </div>
   );
 }
+
