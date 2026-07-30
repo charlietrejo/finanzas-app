@@ -150,7 +150,7 @@ export default function TransactionsPage() {
       <Card>
         <CardHeader>
           <CardTitle>{editingId ? "Editar movimiento" : "Nuevo movimiento"}</CardTitle>
-          <CardDescription>Registra ingresos, gastos y transferencias con categoría, cuenta y fecha.</CardDescription>
+          <CardDescription>Registra ingresos, gastos, transferencias y pagos de deuda.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -224,23 +224,27 @@ export default function TransactionsPage() {
   ))}
 </select>
 
-<select
-  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
-  value={form.categoryId}
-  onChange={(event) =>
-    setForm((current) => ({
-      ...current,
-      categoryId: event.target.value,
-    }))
-  }
->
-  <option value="">Selecciona una categoría</option>
-  {filteredCategories.map((category) => (
-    <option key={category.id} value={category.id}>
-      {category.name}
-    </option>
-  ))}
-</select>
+{form.type !== "DEBT_PAYMENT" && (
+  <select
+    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+    value={form.categoryId}
+    onChange={(event) =>
+      setForm((current) => ({
+        ...current,
+        categoryId: event.target.value,
+      }))
+    }
+  >
+    <option value="">Selecciona una categoría</option>
+
+    {filteredCategories.map((category) => (
+      <option key={category.id} value={category.id}>
+        {category.name}
+      </option>
+    ))}
+
+  </select>
+)}
             </div>
 
             {form.type === "TRANSFER" && (
