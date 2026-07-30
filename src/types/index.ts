@@ -1,7 +1,20 @@
-export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
+export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "DEBT_PAYMENT";
 export type AccountType = "CASH" | "BANK" | "CREDIT_CARD" | "SAVINGS" | "INVESTMENT" | "OTHER";
 export type CategoryType = "INCOME" | "EXPENSE";
+export type DebtType = "CREDIT_CARD" | "LOAN" | "OTHER";
 
+
+export type Debt = {
+  id: string;
+  user_id: string;
+  name: string;
+  type: DebtType;
+  initial_amount: number;
+  current_balance: number;
+  due_date?: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export interface Account {
   id: string;
   user_id: string;
@@ -18,6 +31,7 @@ export interface Transaction {
   user_id: string;
   account_id: string;
   category_id?: string | null;
+  debt_id: string | null;
   destination_account_id?: string | null;
   type: TransactionType;
   amount: number;

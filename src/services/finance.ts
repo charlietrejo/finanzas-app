@@ -25,6 +25,7 @@ type TransactionPayload = {
   categoryId?: string | null;
   destinationAccountId?: string | null;
   transactionDate: string;
+  debtId?: string | null;
 };
 
 type BudgetPayload = {
@@ -39,6 +40,14 @@ type GoalPayload = {
   targetAmount: number;
   currentAmount: number;
   targetDate?: string | null;
+};
+
+type DebtPayload = {
+  name: string;
+  type: "CREDIT_CARD" | "LOAN" | "MORTGAGE" | "OTHER";
+  initialAmount: number;
+  currentBalance?: number;
+  dueDate?: string | null;
 };
 
 function normalizeAmount(value: number | string | null | undefined) {
@@ -66,6 +75,7 @@ async function getCurrentUserId() {
 
 async function updateAccountBalance(accountId: string, delta: number) {
   const client = getClient();
+
   const { data: accountData, error: accountError } = await client
     .from("accounts")
     .select("current_balance")
@@ -76,11 +86,17 @@ async function updateAccountBalance(accountId: string, delta: number) {
     throw accountError ?? new Error("No se encontró la cuenta");
   }
 
-  const nextBalance = normalizeAmount(accountData.current_balance) + delta;
+  const nextBalance = Math.max(
+    0,
+    normalizeAmount(accountData.current_balance) + delta
+  );
 
   const { error } = await client
     .from("accounts")
-    .update({ current_balance: nextBalance, updated_at: new Date().toISOString() })
+    .update({
+      current_balance: nextBalance,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", accountId);
 
   if (error) {
@@ -88,26 +104,103 @@ async function updateAccountBalance(accountId: string, delta: number) {
   }
 }
 
+async function updateDebtBalance(debtId: string, delta: number) {
+  const client = getClient();
+
+  const { data: debt, error } = await client
+    .from("debts")
+    .select("current_balance")
+    .eq("id", debtId)
+    .single();
+
+  if (error || !debt) {
+    throw error ?? new Error("No se encontró la deuda");
+  }
+
+  const nextBalance = Math.max(
+    0,
+    normalizeAmount(debt.current_balance) + delta
+  );
+
+  const { error: updateError } = await client
+    .from("debts")
+    .update({
+      current_balance: nextBalance,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", debtId);
+
+  if (updateError) {
+    throw updateError;
+  }
+}
+
 async function applyTransactionEffect(transaction: Transaction) {
+
+  if (
+    transaction.type === "DEBT_PAYMENT" &&
+    transaction.debt_id
+  ) {
+
+    await updateAccountBalance(
+      transaction.account_id,
+      -normalizeAmount(transaction.amount)
+    );
+
+    await updateDebtBalance(
+      transaction.debt_id,
+      -normalizeAmount(transaction.amount)
+    );
+
+    return;
+  }
+
   if (transaction.type === "INCOME") {
-    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+    await updateAccountBalance(
+      transaction.account_id,
+      normalizeAmount(transaction.amount)
+    );
     return;
   }
 
   if (transaction.type === "EXPENSE") {
-    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    await updateAccountBalance(
+      transaction.account_id,
+      -normalizeAmount(transaction.amount)
+    );
     return;
   }
 
   if (transaction.type === "TRANSFER") {
-    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    await updateAccountBalance(
+      transaction.account_id,
+      -normalizeAmount(transaction.amount)
+    );
+
     if (transaction.destination_account_id) {
-      await updateAccountBalance(transaction.destination_account_id, normalizeAmount(transaction.amount));
+      await updateAccountBalance(
+        transaction.destination_account_id,
+        normalizeAmount(transaction.amount)
+      );
     }
   }
 }
 
 async function revertTransactionEffect(transaction: Transaction) {
+    if (transaction.type === "DEBT_PAYMENT") {
+    await updateAccountBalance(
+      transaction.account_id,
+      normalizeAmount(transaction.amount)
+    );
+
+    if (transaction.debt_id) {
+      await updateDebtBalance(
+        transaction.debt_id,
+        normalizeAmount(transaction.amount)
+      );
+    }
+  }
+  
   if (transaction.type === "INCOME") {
     await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
     return;
@@ -254,6 +347,7 @@ export async function listTransactions() {
 }
 
 export async function createTransaction(payload: TransactionPayload) {
+
   const userId = await getCurrentUserId();
   const client = getClient();
 
@@ -263,6 +357,7 @@ export async function createTransaction(payload: TransactionPayload) {
       user_id: userId,
       account_id: payload.accountId,
       category_id: payload.categoryId ?? null,
+      debt_id: payload.debtId ?? null,
       type: payload.type,
       amount: payload.amount,
       description: payload.description,
@@ -300,6 +395,7 @@ export async function updateTransaction(id: string, payload: TransactionPayload)
     .update({
       account_id: payload.accountId,
       category_id: payload.categoryId ?? null,
+      debt_id: payload.debtId ?? null,
       type: payload.type,
       amount: payload.amount,
       description: payload.description,
@@ -408,7 +504,7 @@ export async function createGoal(payload: GoalPayload) {
       user_id: userId,
       name: payload.name,
       target_amount: payload.targetAmount,
-      current_amount: payload.currentAmount,
+      current_balance: payload.currentAmount,
       target_date: payload.targetDate ?? null,
     })
     .select()
@@ -425,7 +521,7 @@ export async function updateGoal(id: string, payload: GoalPayload) {
     .update({
       name: payload.name,
       target_amount: payload.targetAmount,
-      current_amount: payload.currentAmount,
+      current_balance: payload.currentAmount,
       target_date: payload.targetDate ?? null,
       updated_at: new Date().toISOString(),
     })
@@ -440,5 +536,83 @@ export async function updateGoal(id: string, payload: GoalPayload) {
 export async function deleteGoal(id: string) {
   const client = getClient();
   const { error } = await client.from("goals").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function listDebts() {
+  const client = getClient();
+
+  const { data, error } = await client
+    .from("debts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []) as import("@/types").Debt[];
+}
+
+
+export async function createDebt(payload: {
+  name: string;
+  type: string;
+  initialAmount: number;
+  currentBalance: number;
+  dueDate?: string | null;
+}) {
+  const userId = await getCurrentUserId();
+  const client = getClient();
+
+  const { data, error } = await client
+    .from("debts")
+    .insert({
+      user_id: userId,
+      name: payload.name,
+      type: payload.type,
+      initial_amount: payload.initialAmount,
+      current_balance: payload.currentBalance,
+      due_date: payload.dueDate ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+
+export async function updateDebt(
+  id: string,
+  payload: {
+    currentBalance: number;
+  }
+) {
+  const client = getClient();
+
+  const { data, error } = await client
+    .from("debts")
+    .update({
+      current_balance: payload.currentBalance,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+
+export async function deleteDebt(id: string) {
+  const client = getClient();
+
+  const { error } = await client
+    .from("debts")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }

@@ -5,10 +5,10 @@ import Icon from "@/components/ui/icon-material";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createTransaction, deleteTransaction, listAccounts, listCategories, listTransactions, updateTransaction } from "@/services/finance";
-import type { Account, Category, Transaction, TransactionType } from "@/types";
+import { createTransaction, deleteTransaction, listAccounts, listCategories, listTransactions, updateTransaction, listDebts } from "@/services/finance";
+import type { Account, Category, Transaction, TransactionType, Debt } from "@/types";
 
-const transactionTypes: TransactionType[] = ["INCOME", "EXPENSE", "TRANSFER"];
+const transactionTypes: TransactionType[] = ["INCOME", "EXPENSE", "TRANSFER", "DEBT_PAYMENT"];
 
 const emptyForm = {
   type: "EXPENSE" as TransactionType,
@@ -18,6 +18,7 @@ const emptyForm = {
   accountId: "",
   categoryId: "",
   destinationAccountId: "",
+  debtId: "",
   transactionDate: new Date().toISOString().slice(0, 10),
 };
 
@@ -25,6 +26,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,8 @@ export default function TransactionsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [transactionsData, accountsData, categoriesData] = await Promise.all([listTransactions(), listAccounts(), listCategories()]);
+      const [transactionsData, accountsData, categoriesData, debtsData] = await Promise.all([listTransactions(), listAccounts(), listCategories(), listDebts()]);
+      setDebts(debtsData);
       setTransactions(transactionsData);
       setAccounts(accountsData);
       setCategories(categoriesData);
@@ -51,7 +54,10 @@ export default function TransactionsPage() {
     });
   }, []);
 
-  const filteredCategories = form.type === "TRANSFER" ? [] : categories.filter((category) => category.type === form.type);
+  const filteredCategories =
+  form.type === "TRANSFER" || form.type === "DEBT_PAYMENT"
+    ? []
+    : categories.filter((category) => category.type === form.type);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,6 +73,7 @@ export default function TransactionsPage() {
         categoryId: form.categoryId || null,
         destinationAccountId: form.destinationAccountId || null,
         transactionDate: form.transactionDate,
+        debtId: form.debtId || null,
       };
 
       if (!payload.description) {
@@ -80,6 +87,10 @@ export default function TransactionsPage() {
       if (payload.type === "TRANSFER" && !payload.destinationAccountId) {
         throw new Error("Selecciona una cuenta destino para la transferencia.");
       }
+
+      if (payload.type === "DEBT_PAYMENT" && !payload.debtId) {
+  throw new Error("Selecciona la deuda que deseas pagar.");
+}
 
       if (editingId) {
         await updateTransaction(editingId, payload);
@@ -106,6 +117,7 @@ export default function TransactionsPage() {
       categoryId: transaction.category_id ?? "",
       destinationAccountId: transaction.destination_account_id ?? "",
       transactionDate: transaction.transaction_date,
+      debtId: transaction.debt_id ?? "",
     });
   };
 
@@ -122,7 +134,9 @@ export default function TransactionsPage() {
     <div className="space-y-6 p-2 sm:p-4">
       <div className="space-y-3 rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-5 py-5 text-white shadow-lg shadow-slate-900/20 sm:flex sm:items-end sm:justify-between sm:px-6">
         <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-200/80">Gastos</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-slate-200/80">
+  Finanzas
+</p>
           <h1 className="mt-3 text-2xl font-semibold">Registra tu movimiento</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-100/90">
             Crea ingresos, gastos o transferencias con una experiencia móvil conocida y clara.
@@ -144,13 +158,27 @@ export default function TransactionsPage() {
               <select
                 className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
                 value={form.type}
-                onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as TransactionType, categoryId: "" }))}
+                onChange={(event) =>
+  setForm((current) => ({
+    ...current,
+    type: event.target.value as TransactionType,
+    categoryId: "",
+    debtId: "",
+    destinationAccountId: "",
+  }))
+}
               >
                 {transactionTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type === "INCOME" ? "Ingreso" : type === "EXPENSE" ? "Gasto" : "Transferencia"}
-                  </option>
-                ))}
+  <option key={type} value={type}>
+    {type === "INCOME"
+      ? "Ingreso"
+      : type === "EXPENSE"
+      ? "Gasto"
+      : type === "TRANSFER"
+      ? "Transferencia"
+      : "Pago de deuda"}
+  </option>
+))}
               </select>
               <input
                 type="number"
@@ -230,6 +258,33 @@ export default function TransactionsPage() {
               </select>
             )}
 
+            {form.type === "DEBT_PAYMENT" && (
+  <select
+    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+    value={form.debtId}
+    onChange={(event) =>
+      setForm((current) => ({
+        ...current,
+        debtId: event.target.value,
+      }))
+    }
+  >
+    <option value="">
+      Selecciona una deuda
+    </option>
+
+    {debts.map((debt) => (
+      <option key={debt.id} value={debt.id}>
+        {debt.name} -{" "}
+        {Number(debt.current_balance).toLocaleString("es-MX", {
+          style: "currency",
+          currency: "MXN",
+        })}
+      </option>
+    ))}
+  </select>
+)}
+
             <input
               type="date"
               className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
@@ -269,7 +324,16 @@ export default function TransactionsPage() {
             <div key={transaction.id} className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-semibold text-slate-900">{transaction.description}</p>
-                <p className="text-sm text-slate-500">{transaction.type === "INCOME" ? "Ingreso" : transaction.type === "EXPENSE" ? "Gasto" : "Transferencia"} • {transaction.transaction_date}</p>
+                <p className="text-sm text-slate-500">
+  {transaction.type === "INCOME"
+    ? "Ingreso"
+    : transaction.type === "EXPENSE"
+    ? "Gasto"
+    : transaction.type === "TRANSFER"
+    ? "Transferencia"
+    : "Pago de deuda"}{" "}
+  • {transaction.transaction_date}
+</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <span className="font-semibold text-slate-900">
