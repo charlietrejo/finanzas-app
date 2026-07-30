@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Goal, LayoutGrid, ListChecks, Settings } from "lucide-react";
+import { BarChart3, CreditCard, LayoutGrid, ListChecks, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,7 @@ const items = [
   { href: "/dashboard", label: "Inicio", icon: LayoutGrid },
   { href: "/analytics", label: "Análisis", icon: BarChart3 },
   { href: "/transactions", label: "Mov.", icon: ListChecks, primary: true },
-  { href: "/goals", label: "Metas", icon: Goal },
+  { href: "/debts", label: "Deudas", icon: CreditCard },
   { href: "/settings", label: "Más", icon: Settings },
 ];
 

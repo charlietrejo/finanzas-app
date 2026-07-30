@@ -1,15 +1,47 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, Settings2 } from "lucide-react";
+import {  LogOut,  Wallet,  Tags,  PiggyBank,  Goal,  ChevronRight, CreditCard,} from "lucide-react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from "@/components/ui/card";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const modules = [
+  {
+    title: "Cuentas",
+    description: "Administra tus cuentas",
+    icon: Wallet,
+    href: "/accounts",
+  },
+  {
+    title: "Categorías",
+    description: "Organiza tus movimientos",
+    icon: Tags,
+    href: "/categories",
+  },
+  {
+    title: "Presupuestos",
+    description: "Controla tus límites",
+    icon: PiggyBank,
+    href: "/budgets",
+  },
+  {
+    title: "Metas",
+    description: "Objetivos de ahorro",
+    icon: Goal,
+    href: "/goals",
+  },
+  {
+  title: "Deudas",
+  description: "Tarjetas y préstamos",
+  icon: CreditCard,
+  href: "/debts",
+},
+];
 
   const handleLogout = async () => {
     await signOut();
@@ -27,26 +59,43 @@ export default function SettingsPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Preparación para PWA</CardTitle>
-            <CardDescription>Manifest, metadata iOS, standalone mode y soporte para iPhone.</CardDescription>
+  <CardHeader>
+    <CardTitle>Administración</CardTitle>
+    <CardDescription>
+      Configura los módulos principales de la aplicación.
+    </CardDescription>
+  </CardHeader>
+
+  <CardContent className="space-y-3">
+    {modules.map((module) => {
+      const Icon = module.icon;
+
+      return (
+        <button
+          key={module.href}
+          type="button"
+          onClick={() => router.push(module.href)}
+          className="flex w-full items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="rounded-2xl bg-violet-100 p-3">
+              <Icon className="h-5 w-5 text-violet-600" />
+            </div>
+
+            <div className="text-left">
+              <p className="font-semibold">{module.title}</p>
+              <p className="text-sm text-slate-500">
+                {module.description}
+              </p>
+            </div>
           </div>
-          <Settings2 className="h-6 w-6 text-violet-600" />
-        </CardHeader>
-        <CardContent className="grid gap-4 rounded-[28px] bg-violet-50/80 p-6 text-slate-700">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Instalación nativa y navegación segura</p>
-            <p className="text-sm text-slate-600">
-              Ya está configurado para que la app pueda instalarse en Safari y desplegarse con un look nativo en iOS.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-violet-200/70 bg-white/90 p-4">
-            <p className="text-sm font-semibold text-slate-900">Soporte iPhone</p>
-            <p className="text-sm text-slate-500">Evitar zoom automático, viewport adaptado y manifest listo.</p>
-          </div>
-        </CardContent>
-      </Card>
+
+          <ChevronRight className="h-5 w-5 text-slate-400" />
+        </button>
+      );
+    })}
+  </CardContent>
+</Card>
 
       <Card>
         <CardHeader>

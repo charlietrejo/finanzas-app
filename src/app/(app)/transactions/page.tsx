@@ -102,8 +102,8 @@ export default function TransactionsPage() {
       setEditingId(null);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar el movimiento.");
-    }
+  setError(err instanceof Error ? err.message : "No se pudo guardar el movimiento.");
+}
   };
 
   const handleEdit = (transaction: Transaction) => {
