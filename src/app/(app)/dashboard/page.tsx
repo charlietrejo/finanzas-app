@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/ui/icon-material";
 
@@ -8,20 +8,44 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { listAccounts } from "@/services/finance";
-import type { Account } from "@/types";
+import { listAccounts, listTransactions } from "@/services/finance";
+import type { Account, Transaction } from "@/types";
+
+function monthShort(d: Date) {
+  return d.toLocaleString("en-US", { month: "short" });
+}
+
+function lastNMonths(n: number) {
+  const now = new Date();
+  return Array.from({ length: n }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (n - 1 - index), 1);
+    return {
+      label: monthShort(date),
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+    };
+  });
+}
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRange, setSelectedRange] = useState(6);
+  const chartRanges = [3, 6, 12] as const;
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const data = await listAccounts();
-        setAccounts(data);
+        const [accountData, transactionData] = await Promise.all([
+          listAccounts(),
+          listTransactions(),
+        ]);
+
+        setAccounts(accountData);
+        setTransactions(transactionData);
       } catch (error) {
-        console.error("Error cargando cuentas:", error);
+        console.error("Error cargando datos del dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -53,6 +77,24 @@ export default function DashboardPage() {
 
     return types[type] ?? type;
   };
+
+  const monthlyExpenseHistory = useMemo(() => {
+    const months = lastNMonths(selectedRange);
+    return months.map((month) => {
+      const total = transactions
+        .filter((transaction) => {
+          const [year, monthIndex] = transaction.transaction_date.split("-");
+          return (
+            Number(year) === month.year &&
+            Number(monthIndex) === month.month &&
+            transaction.type === "EXPENSE"
+          );
+        })
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+      return { ...month, total };
+    });
+  }, [selectedRange, transactions]);
 
   return (
     <div className="space-y-6 p-2 sm:p-4">
@@ -253,12 +295,59 @@ export default function DashboardPage() {
           </CardHeader>
 
 
-          <CardContent>
-
-            <div className="rounded-[28px] bg-slate-50 p-4 text-sm text-slate-500">
-              Próximamente conectado con transacciones.
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-[28px] bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <span>Últimos {selectedRange} meses</span>
+              <div className="flex flex-wrap gap-2">
+                {chartRanges.map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => setSelectedRange(range)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      selectedRange === range
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    {range} meses
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {monthlyExpenseHistory.every((item) => item.total === 0) ? (
+              <div className="rounded-[28px] bg-slate-50 p-8 text-center text-sm text-slate-500">
+                No hay gastos registrados en este rango.
+              </div>
+            ) : (
+              <div className="rounded-[28px] bg-slate-50 p-4">
+                <div className="flex items-end gap-2 h-52">
+                  {monthlyExpenseHistory.map((month) => {
+                    const max = Math.max(1, ...monthlyExpenseHistory.map((item) => item.total));
+                    const height = Math.max(28, (month.total / max) * 192);
+
+                    return (
+                      <div key={`${month.label}-${month.year}`} className="flex-1">
+                        <div className="group relative mx-auto flex h-full w-full items-end justify-center">
+                          <div className="absolute -top-9 left-1/2 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition duration-200 group-hover:opacity-100">
+                            {formatMoney(month.total)}
+                          </div>
+                          <div
+                            style={{ height: `${height}px` }}
+                            className="w-full rounded-full bg-gradient-to-b from-sky-500 to-slate-200"
+                            title={`${month.label} ${month.year}: ${formatMoney(month.total)}`}
+                          />
+                        </div>
+                        <p className="mt-3 text-center text-xs text-slate-400">
+                          {month.label}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
 
         </Card>

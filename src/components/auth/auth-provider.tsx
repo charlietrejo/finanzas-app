@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -22,6 +22,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const pendingSignInRef = useRef<{
+    resolve: (() => void) | null;
+    reject: ((error: unknown) => void) | null;
+  } | null>(null);
 
   useEffect(() => {
     const client = supabase;
@@ -53,10 +57,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
+
+      // If there's a pending signIn promise, resolve it when session is available
+      if (pendingSignInRef.current && currentSession) {
+        pendingSignInRef.current.resolve?.();
+        pendingSignInRef.current = null;
+      }
     });
 
     return () => {
       active = false;
+      // If component unmounts while waiting for a signIn, reject the pending promise
+      if (pendingSignInRef.current) {
+        pendingSignInRef.current.reject?.(new Error("AuthProvider unmounted"));
+        pendingSignInRef.current = null;
+      }
       subscription.unsubscribe();
     };
   }, []);
@@ -67,7 +82,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? { message: error.message } : null };
+    if (error) return { error: { message: error.message } };
+
+    // If signIn succeeded, check if session is already available
+    const {
+      data: { session: maybeSession },
+    } = await supabase.auth.getSession();
+
+    if (maybeSession) {
+      // session already available — update state and return
+      setSession(maybeSession);
+      setUser(maybeSession.user ?? null);
+      return { error: null };
+    }
+
+    // Otherwise, wait for onAuthStateChange to notify us about the new session.
+    return await new Promise<{ error: { message: string } | null }>((resolve) => {
+      pendingSignInRef.current = {
+        resolve: () => resolve({ error: null }),
+        reject: (err: unknown) => resolve({ error: { message: (err as Error)?.message ?? String(err ?? "") } }),
+      };
+    });
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {

@@ -10,6 +10,7 @@ const items = [
   { href: "/dashboard", label: "Inicio", icon: LayoutGrid },
   { href: "/analytics", label: "Análisis", icon: BarChart3 },
   { href: "/transactions", label: "Mov.", icon: ListChecks, primary: true },
+  { href: "/goals", label: "Metas", icon: CreditCard },
   { href: "/debts", label: "Deudas", icon: CreditCard },
   { href: "/settings", label: "Más", icon: Settings },
 ];

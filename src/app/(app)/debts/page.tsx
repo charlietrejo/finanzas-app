@@ -104,7 +104,9 @@ export default function DebtsPage() {
 
 
     useEffect(() => {
-        void loadDebts();
+        queueMicrotask(() => {
+            void loadDebts();
+        });
     }, []);
 
 
@@ -149,9 +151,12 @@ export default function DebtsPage() {
 
 
             if (editingId) {
-
                 await updateDebt(editingId, {
-                    currentBalance: payload.currentBalance
+                    name: payload.name,
+                    type: payload.type,
+                    initialAmount: payload.initialAmount,
+                    currentBalance: payload.currentBalance,
+                    dueDate: payload.dueDate,
                 });
             } else {
                 await createDebt(payload);

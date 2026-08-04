@@ -17,14 +17,18 @@ import type {
 } from "@/types";
 
 
-const chartPoints = [
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-];
+const monthShort = (d: Date) =>
+  d.toLocaleString("en-US", { month: "short" });
+
+function lastNMonths(n: number) {
+  const res: { label: string; year: number; month: number }[] = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    res.push({ label: monthShort(d), year: d.getFullYear(), month: d.getMonth() + 1 });
+  }
+  return res;
+}
 
 
 export default function AnalyticsPage() {
@@ -35,8 +39,9 @@ export default function AnalyticsPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRange, setSelectedRange] = useState(6);
 
-
+  const chartRanges = [3, 6, 12] as const;
 
   const formatMoney = (amount: number) =>
     amount.toLocaleString("es-MX", {
@@ -256,6 +261,24 @@ export default function AnalyticsPage() {
     accounts,
   ]);
 
+  const monthlyExpenseHistory = useMemo(() => {
+    const months = lastNMonths(selectedRange);
+    return months.map((month) => {
+      const total = transactions
+        .filter((transaction) => {
+          const [year, monthIndex] = transaction.transaction_date.split("-");
+          return (
+            Number(year) === month.year &&
+            Number(monthIndex) === month.month &&
+            transaction.type === "EXPENSE"
+          );
+        })
+        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+      return { ...month, total };
+    });
+  }, [selectedRange, transactions]);
+
 
 
 
@@ -386,32 +409,54 @@ export default function AnalyticsPage() {
 
 
 
-          <div className="flex items-end gap-2 h-48">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-semibold text-slate-900">
+                Últimos {selectedRange} meses
+              </span>
 
-            {chartPoints.map((label, index) => (
-
-              <div
-                key={label}
-                className="flex-1"
-              >
-
-                <div
-                  style={{
-                    height: `${30 + index * 8}px`,
-                  }}
-                  className="mx-auto w-full rounded-full bg-gradient-to-b from-violet-500 to-slate-200"
-                />
-
-
-                <p className="mt-3 text-center text-xs text-slate-400">
-                  {label}
-                </p>
-
-
+              <div className="flex flex-wrap gap-2">
+                {chartRanges.map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => setSelectedRange(range)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      selectedRange === range
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    {range} meses
+                  </button>
+                ))}
               </div>
+            </div>
 
-            ))}
+            <div className="flex items-end gap-2 h-56">
+              {monthlyExpenseHistory.map((month) => {
+                const max = Math.max(1, ...monthlyExpenseHistory.map((item) => item.total));
+                const height = Math.max(28, (month.total / max) * 180);
 
+                return (
+                  <div key={`${month.label}-${month.year}`} className="flex-1">
+                    <div className="group relative mx-auto flex h-full w-full items-end justify-center">
+                      <div className="absolute -top-8 left-1/2 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition duration-200 group-hover:opacity-100">
+                        {formatMoney(month.total)}
+                      </div>
+                      <div
+                        style={{ height: `${height}px` }}
+                        className="w-full rounded-full bg-gradient-to-b from-violet-500 to-slate-200"
+                        title={`${month.label} ${month.year}: ${formatMoney(month.total)}`}
+                      />
+                    </div>
+                    <p className="mt-3 text-center text-xs text-slate-400">
+                      {month.label}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
 
@@ -592,7 +637,7 @@ export default function AnalyticsPage() {
       <CardHeader>
 
         <CardTitle>
-          Insights
+          Perspectivas
         </CardTitle>
 
 

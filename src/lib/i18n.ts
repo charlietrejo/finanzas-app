@@ -20,7 +20,7 @@ export function translateLabel(label: string) {
     "Total net worth": "Patrimonio total",
     "Summary": "Resumen",
     "Monthly flow": "Flujo mensual",
-    "Insights": "Insights",
+    "Insights": "Perspectivas",
     "Overview": "Resumen",
     "Assets": "Activos",
     "Debt": "Deuda",

@@ -11,7 +11,7 @@ const links = [
   { href: "/dashboard", label: "Inicio", name: "grid_on" },
   { href: "/analytics", label: "Análisis", name: "bar_chart" },
   { href: "/transactions", label: "Movimientos", name: "receipt_long" },
-  { href: "/goals", label: "Metas", name: "flag" },
+  { href: "/debts", label: "Deudas", name: "credit_card" },
   { href: "/settings", label: "Más", name: "settings" },
 ];
 

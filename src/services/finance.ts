@@ -1,11 +1,12 @@
 import { supabase } from "@/lib/supabase/browser";
 import type { Account, AccountType, Category, CategoryType, Transaction, TransactionType } from "@/types";
 
-type AccountPayload = {
+export type AccountPayload = {
   name: string;
   type: AccountType;
   initialBalance: number;
   currentBalance?: number;
+  debtId?: string | null;
 };
 
 type CategoryPayload = {
@@ -40,14 +41,6 @@ type GoalPayload = {
   targetAmount: number;
   currentAmount: number;
   targetDate?: string | null;
-};
-
-type DebtPayload = {
-  name: string;
-  type: "CREDIT_CARD" | "LOAN" | "MORTGAGE" | "OTHER";
-  initialAmount: number;
-  currentBalance?: number;
-  dueDate?: string | null;
 };
 
 function normalizeAmount(value: number | string | null | undefined) {
@@ -137,77 +130,99 @@ async function updateDebtBalance(debtId: string, delta: number) {
 
 async function applyTransactionEffect(transaction: Transaction) {
 
-  if (
-    transaction.type === "DEBT_PAYMENT" &&
-    transaction.debt_id
-  ) {
-
-    await updateAccountBalance(
-      transaction.account_id,
-      -normalizeAmount(transaction.amount)
-    );
-
-    await updateDebtBalance(
-      transaction.debt_id,
-      -normalizeAmount(transaction.amount)
-    );
-
+  // Pago de deuda: afecta cuenta (pago) y deuda (reduce saldo)
+  if (transaction.type === "DEBT_PAYMENT" && transaction.debt_id) {
+    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    await updateDebtBalance(transaction.debt_id, -normalizeAmount(transaction.amount));
     return;
   }
 
   if (transaction.type === "INCOME") {
-    await updateAccountBalance(
-      transaction.account_id,
-      normalizeAmount(transaction.amount)
-    );
+    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
     return;
   }
 
   if (transaction.type === "EXPENSE") {
-    await updateAccountBalance(
-      transaction.account_id,
-      -normalizeAmount(transaction.amount)
-    );
+    // Si la cuenta es una tarjeta de crédito, su current_balance representa la
+    // deuda actual. Una compra aumenta esa deuda, no la reduce.
+    const client = getClient();
+    const { data: account, error: accountError } = await client
+      .from("accounts")
+      .select("type, debt_id")
+      .eq("id", transaction.account_id)
+      .single();
+
+    if (accountError || !account) {
+      throw accountError ?? new Error("No se encontró la cuenta");
+    }
+
+    const linkedDebtId = transaction.debt_id ?? account.debt_id ?? null;
+
+    if (account.type === "CREDIT_CARD") {
+      // Tarjeta vinculada a una deuda: se actualiza la deuda.
+      // Tarjeta sin deuda vinculada: el saldo de la cuenta es la deuda misma.
+      if (linkedDebtId) {
+        await updateDebtBalance(linkedDebtId, normalizeAmount(transaction.amount));
+      } else {
+        await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+      }
+    } else {
+      await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    }
+
     return;
   }
 
   if (transaction.type === "TRANSFER") {
-    await updateAccountBalance(
-      transaction.account_id,
-      -normalizeAmount(transaction.amount)
-    );
+    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
 
     if (transaction.destination_account_id) {
-      await updateAccountBalance(
-        transaction.destination_account_id,
-        normalizeAmount(transaction.amount)
-      );
+      await updateAccountBalance(transaction.destination_account_id, normalizeAmount(transaction.amount));
     }
   }
 }
 
 async function revertTransactionEffect(transaction: Transaction) {
-    if (transaction.type === "DEBT_PAYMENT") {
-    await updateAccountBalance(
-      transaction.account_id,
-      normalizeAmount(transaction.amount)
-    );
+  if (transaction.type === "DEBT_PAYMENT") {
+    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
 
     if (transaction.debt_id) {
-      await updateDebtBalance(
-        transaction.debt_id,
-        normalizeAmount(transaction.amount)
-      );
+      await updateDebtBalance(transaction.debt_id, normalizeAmount(transaction.amount));
     }
+    return;
   }
-  
+
   if (transaction.type === "INCOME") {
     await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
     return;
   }
 
   if (transaction.type === "EXPENSE") {
-    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+    // Reversión espejo de applyTransactionEffect para EXPENSE.
+    const client = getClient();
+    const { data: account, error: accountError } = await client
+      .from("accounts")
+      .select("type, debt_id")
+      .eq("id", transaction.account_id)
+      .single();
+
+    if (accountError || !account) {
+      throw accountError ?? new Error("No se encontró la cuenta");
+    }
+
+    const linkedDebtId = transaction.debt_id ?? account.debt_id ?? null;
+
+    if (account.type === "CREDIT_CARD") {
+      // Tarjeta vinculada a una deuda: se revierte la deuda.
+      // Tarjeta sin deuda vinculada: el saldo de la cuenta es la deuda misma.
+      if (linkedDebtId) {
+        await updateDebtBalance(linkedDebtId, -normalizeAmount(transaction.amount));
+      } else {
+        await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+      }
+    } else {
+      await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+    }
     return;
   }
 
@@ -239,6 +254,7 @@ export async function createAccount(payload: AccountPayload) {
       type: payload.type,
       initial_balance: payload.initialBalance,
       current_balance: payload.currentBalance ?? payload.initialBalance,
+      debt_id: payload.debtId ?? null,
     })
     .select()
     .single();
@@ -256,6 +272,7 @@ export async function updateAccount(id: string, payload: AccountPayload) {
       type: payload.type,
       initial_balance: payload.initialBalance,
       current_balance: payload.currentBalance ?? payload.initialBalance,
+      debt_id: payload.debtId ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -351,13 +368,64 @@ export async function createTransaction(payload: TransactionPayload) {
   const userId = await getCurrentUserId();
   const client = getClient();
 
+  // Si la transacción es un gasto y la cuenta es una tarjeta vinculada a una deuda,
+  // validamos que la compra no exceda el límite y asociamos la deuda automáticamente.
+  let insertDebtId: string | null = payload.debtId ?? null;
+  if (payload.type === "EXPENSE") {
+    const { data: account, error: accountError } = await client
+      .from("accounts")
+      .select("type, debt_id")
+      .eq("id", payload.accountId)
+      .single();
+
+    if (accountError || !account) {
+      throw accountError ?? new Error("No se encontró la cuenta");
+    }
+
+    if (account.type === "CREDIT_CARD") {
+      if (account.debt_id) {
+        const { data: debt, error: debtError } = await client
+          .from("debts")
+          .select("current_balance, initial_amount")
+          .eq("id", account.debt_id)
+          .single();
+
+        if (debtError || !debt) {
+          throw debtError ?? new Error("No se encontró la deuda asociada a la tarjeta");
+        }
+
+        if (normalizeAmount(debt.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(debt.initial_amount)) {
+          throw new Error("La compra excede el límite de la tarjeta.");
+        }
+
+        insertDebtId = account.debt_id;
+      } else {
+        // Tarjeta sin deuda vinculada: su current_balance es la deuda actual y
+        // su initial_balance es el límite de crédito.
+        const { data: card, error: cardError } = await client
+          .from("accounts")
+          .select("current_balance, initial_balance")
+          .eq("id", payload.accountId)
+          .single();
+
+        if (cardError || !card) {
+          throw cardError ?? new Error("No se encontró la cuenta");
+        }
+
+        if (normalizeAmount(card.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(card.initial_balance)) {
+          throw new Error("La compra excede el límite de la tarjeta.");
+        }
+      }
+    }
+  }
+
   const { data, error } = await client
     .from("transactions")
     .insert({
       user_id: userId,
       account_id: payload.accountId,
       category_id: payload.categoryId ?? null,
-      debt_id: payload.debtId ?? null,
+      debt_id: insertDebtId ?? null,
       type: payload.type,
       amount: payload.amount,
       description: payload.description,
@@ -390,12 +458,63 @@ export async function updateTransaction(id: string, payload: TransactionPayload)
 
   await revertTransactionEffect(existing as Transaction);
 
+  // Validación similar a la creación: si el nuevo payload es un gasto sobre
+  // una tarjeta vinculada, validamos límite y asignamos la deuda.
+  let updateDebtId: string | null = payload.debtId ?? null;
+  if (payload.type === "EXPENSE") {
+    const { data: account, error: accountError } = await client
+      .from("accounts")
+      .select("type, debt_id")
+      .eq("id", payload.accountId)
+      .single();
+
+    if (accountError || !account) {
+      throw accountError ?? new Error("No se encontró la cuenta");
+    }
+
+    if (account.type === "CREDIT_CARD") {
+      if (account.debt_id) {
+        const { data: debt, error: debtError } = await client
+          .from("debts")
+          .select("current_balance, initial_amount")
+          .eq("id", account.debt_id)
+          .single();
+
+        if (debtError || !debt) {
+          throw debtError ?? new Error("No se encontró la deuda asociada a la tarjeta");
+        }
+
+        if (normalizeAmount(debt.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(debt.initial_amount)) {
+          throw new Error("La compra excede el límite de la tarjeta.");
+        }
+
+        updateDebtId = account.debt_id;
+      } else {
+        // Tarjeta sin deuda vinculada: su current_balance es la deuda actual y
+        // su initial_balance es el límite de crédito.
+        const { data: card, error: cardError } = await client
+          .from("accounts")
+          .select("current_balance, initial_balance")
+          .eq("id", payload.accountId)
+          .single();
+
+        if (cardError || !card) {
+          throw cardError ?? new Error("No se encontró la cuenta");
+        }
+
+        if (normalizeAmount(card.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(card.initial_balance)) {
+          throw new Error("La compra excede el límite de la tarjeta.");
+        }
+      }
+    }
+  }
+
   const { data, error } = await client
     .from("transactions")
     .update({
       account_id: payload.accountId,
       category_id: payload.categoryId ?? null,
-      debt_id: payload.debtId ?? null,
+      debt_id: updateDebtId ?? null,
       type: payload.type,
       amount: payload.amount,
       description: payload.description,
@@ -585,17 +704,42 @@ export async function createDebt(payload: {
 export async function updateDebt(
   id: string,
   payload: {
-    currentBalance: number;
+    name?: string;
+    type?: string;
+    initialAmount?: number;
+    currentBalance?: number;
+    dueDate?: string | null;
   }
 ) {
   const client = getClient();
 
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (payload.name !== undefined) {
+    updateData.name = payload.name;
+  }
+
+  if (payload.type !== undefined) {
+    updateData.type = payload.type;
+  }
+
+  if (payload.initialAmount !== undefined) {
+    updateData.initial_amount = payload.initialAmount;
+  }
+
+  if (payload.currentBalance !== undefined) {
+    updateData.current_balance = payload.currentBalance;
+  }
+
+  if (payload.dueDate !== undefined) {
+    updateData.due_date = payload.dueDate;
+  }
+
   const { data, error } = await client
     .from("debts")
-    .update({
-      current_balance: payload.currentBalance,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single();
