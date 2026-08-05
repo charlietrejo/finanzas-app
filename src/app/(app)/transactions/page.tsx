@@ -51,6 +51,12 @@ export default function TransactionsPage() {
   useEffect(() => {
     queueMicrotask(() => {
       void loadData();
+
+      // Preselecciona el tipo desde ?type= (acciones rápidas del dashboard).
+      const presetType = new URLSearchParams(window.location.search).get("type");
+      if (presetType && (transactionTypes as string[]).includes(presetType)) {
+        setForm((prev) => ({ ...prev, type: presetType as TransactionType }));
+      }
     });
   }, []);
 
@@ -97,6 +103,13 @@ export default function TransactionsPage() {
       if (payload.type === "DEBT_PAYMENT" && !payload.debtId) {
   throw new Error("Selecciona la deuda que deseas pagar.");
 }
+
+      if (payload.type === "DEBT_PAYMENT" && payload.debtId) {
+        const debt = debts.find((d) => d.id === payload.debtId);
+        if (debt && Number(payload.amount) > Number(debt.current_balance)) {
+          throw new Error("El pago no puede ser mayor a la deuda actual.");
+        }
+      }
 
       if (editingId) {
         await updateTransaction(editingId, payload);
@@ -162,7 +175,7 @@ export default function TransactionsPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
                 value={form.type}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -179,7 +192,7 @@ export default function TransactionsPage() {
                     {type === "INCOME"
                       ? "Ingreso"
                       : type === "EXPENSE"
-                      ? "Gasto"
+                      ? (selectedAccount?.type === "CREDIT_CARD" ? "Compra con tarjeta" : "Gasto")
                       : type === "TRANSFER"
                       ? "Transferencia"
                       : "Pago de deuda"}
@@ -190,7 +203,7 @@ export default function TransactionsPage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
                 placeholder="Importe"
                 value={form.amount}
                 onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
@@ -198,14 +211,14 @@ export default function TransactionsPage() {
             </div>
 
             <input
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
               placeholder="Descripción"
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
 
             <textarea
-              className="min-h-24 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+              className="min-h-24 w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
               placeholder="Notas opcionales"
               value={form.notes}
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
@@ -213,7 +226,7 @@ export default function TransactionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <select
-  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+  className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
   value={form.accountId}
   onChange={(event) =>
     setForm((current) => ({
@@ -241,7 +254,7 @@ export default function TransactionsPage() {
             )}
 {form.type !== "DEBT_PAYMENT" && (
   <select
-    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
     value={form.categoryId}
     onChange={(event) =>
       setForm((current) => ({
@@ -264,7 +277,7 @@ export default function TransactionsPage() {
 
             {form.type === "TRANSFER" && (
               <select
-                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
                 value={form.destinationAccountId}
                 onChange={(event) => setForm((current) => ({ ...current, destinationAccountId: event.target.value }))}
               >
@@ -279,7 +292,7 @@ export default function TransactionsPage() {
 
             {form.type === "DEBT_PAYMENT" && (
   <select
-    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-violet-400"
+    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
     value={form.debtId}
     onChange={(event) =>
       setForm((current) => ({
@@ -306,7 +319,7 @@ export default function TransactionsPage() {
 
             <input
               type="date"
-              className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-violet-400"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-violet-400"
               value={form.transactionDate}
               onChange={(event) => setForm((current) => ({ ...current, transactionDate: event.target.value }))}
             />

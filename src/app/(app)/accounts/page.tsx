@@ -152,9 +152,9 @@ export default function AccountsPage() {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Nombre de la cuenta</label>
+              <label className="mb-1 block text-sm font-medium text-slate-500">Nombre de la cuenta</label>
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Ej. BBVA Nómina"
                 value={form.name}
                 onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -162,9 +162,9 @@ export default function AccountsPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de cuenta</label>
+              <label className="mb-1 block text-sm font-medium text-slate-500">Tipo de cuenta</label>
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 value={form.type}
                 onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as AccountType, debtId: "" }))}
               >
@@ -178,9 +178,9 @@ export default function AccountsPage() {
 
             {form.type === "CREDIT_CARD" && (
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Vincular a deuda (opcional)</label>
+                <label className="mb-1 block text-sm font-medium text-slate-500">Vincular a deuda (opcional)</label>
                 <select
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                  className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                   value={form.debtId}
                   onChange={(event) => setForm((current) => ({ ...current, debtId: event.target.value }))}
                 >
@@ -197,12 +197,12 @@ export default function AccountsPage() {
             {form.type === "CREDIT_CARD" && !form.debtId && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Límite de crédito (MXN)</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-500">Límite de crédito (MXN)</label>
                   <input
                     type="number"
                     inputMode="decimal"
                     step="0.01"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                     placeholder="Ej. 50000"
                     value={form.initialBalance}
                     onChange={(event) => setForm((current) => ({ ...current, initialBalance: event.target.value }))}
@@ -210,12 +210,12 @@ export default function AccountsPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Deuda actual (MXN)</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-500">Deuda actual (MXN)</label>
                   <input
                     type="number"
                     inputMode="decimal"
                     step="0.01"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                     placeholder="0"
                     value={form.currentBalance}
                     onChange={(event) => setForm((current) => ({ ...current, currentBalance: event.target.value }))}
@@ -225,11 +225,11 @@ export default function AccountsPage() {
             )}
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Saldo inicial</label>
+              <label className="mb-1 block text-sm font-medium text-slate-500">Saldo inicial</label>
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Ej. 5000"
                 value={form.initialBalance}
                 onChange={(event) => setForm((current) => ({ ...current, initialBalance: event.target.value }))}

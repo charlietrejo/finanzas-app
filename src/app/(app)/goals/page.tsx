@@ -126,7 +126,7 @@ export default function GoalsPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               placeholder="Nombre de la meta"
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -135,7 +135,7 @@ export default function GoalsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Monto objetivo"
                 value={form.targetAmount}
                 onChange={(event) => setForm((current) => ({ ...current, targetAmount: event.target.value }))}
@@ -143,7 +143,7 @@ export default function GoalsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Monto actual"
                 value={form.currentAmount}
                 onChange={(event) => setForm((current) => ({ ...current, currentAmount: event.target.value }))}
@@ -151,7 +151,7 @@ export default function GoalsPage() {
             </div>
             <input
               type="date"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               value={form.targetDate}
               onChange={(event) => setForm((current) => ({ ...current, targetDate: event.target.value }))}
             />

@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@layer utilities {
+  /* Safe-area helpers para iPhone (notch / isla dinámica / home indicator). */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Feedback táctil reutilizable. */
+  .tap-feedback {
+    transition-property: transform;
+    transition-duration: 100ms;
+  }
+  .tap-feedback:active {
+    transform: scale(0.98);
+  }
+}
+
 :root {
   --background: #f8f2ff;
   --foreground: #0f172a;
@@ -20,11 +38,13 @@ html {
   color-scheme: light;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background: radial-gradient(circle at top, rgba(139, 92, 246, 0.08), transparent 42%), var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
@@ -36,6 +56,8 @@ select,
 button {
   font: inherit;
   font-size: 1rem;
+  /* Altura mínima táctil (48px) para cumplir tap targets en iOS. */
+  min-height: 3rem;
 }
 
 * {

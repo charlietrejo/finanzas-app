@@ -19,7 +19,7 @@ export function MobileNav({ className }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className={cn("fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/92 px-3 py-3 backdrop-blur", className)}>
+    <nav className={cn("fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/92 px-3 pb-safe pt-3 backdrop-blur", className)}>
       <div className="mx-auto flex max-w-md items-center justify-between gap-2">
         {items.map((item) => {
           const Icon = item.icon;

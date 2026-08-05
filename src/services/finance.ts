@@ -66,7 +66,11 @@ async function getCurrentUserId() {
   return data.user.id;
 }
 
-async function updateAccountBalance(accountId: string, delta: number) {
+async function updateAccountBalance(
+  accountId: string,
+  delta: number,
+  opts: { allowNegative?: boolean } = {}
+) {
   const client = getClient();
 
   const { data: accountData, error: accountError } = await client
@@ -79,10 +83,11 @@ async function updateAccountBalance(accountId: string, delta: number) {
     throw accountError ?? new Error("No se encontró la cuenta");
   }
 
-  const nextBalance = Math.max(
-    0,
-    normalizeAmount(accountData.current_balance) + delta
-  );
+  const computed = normalizeAmount(accountData.current_balance) + delta;
+  // Los pagos de deuda ya se validan antes de llegar aquí; permitimos el valor
+  // real para no enmascarar inconsistencias. El resto de operaciones mantiene
+  // el piso en 0 para evitar saldos negativos accidentales.
+  const nextBalance = opts.allowNegative ? computed : Math.max(0, computed);
 
   const { error } = await client
     .from("accounts")
@@ -110,10 +115,7 @@ async function updateDebtBalance(debtId: string, delta: number) {
     throw error ?? new Error("No se encontró la deuda");
   }
 
-  const nextBalance = Math.max(
-    0,
-    normalizeAmount(debt.current_balance) + delta
-  );
+  const nextBalance = normalizeAmount(debt.current_balance) + delta;
 
   const { error: updateError } = await client
     .from("debts")
@@ -132,7 +134,7 @@ async function applyTransactionEffect(transaction: Transaction) {
 
   // Pago de deuda: afecta cuenta (pago) y deuda (reduce saldo)
   if (transaction.type === "DEBT_PAYMENT" && transaction.debt_id) {
-    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount), { allowNegative: true });
     await updateDebtBalance(transaction.debt_id, -normalizeAmount(transaction.amount));
     return;
   }
@@ -156,7 +158,7 @@ async function applyTransactionEffect(transaction: Transaction) {
       throw accountError ?? new Error("No se encontró la cuenta");
     }
 
-    const linkedDebtId = transaction.debt_id ?? account.debt_id ?? null;
+    const linkedDebtId = transaction.debt_id ?? null;
 
     if (account.type === "CREDIT_CARD") {
       // Tarjeta vinculada a una deuda: se actualiza la deuda.
@@ -174,17 +176,17 @@ async function applyTransactionEffect(transaction: Transaction) {
   }
 
   if (transaction.type === "TRANSFER") {
-    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount));
+    await updateAccountBalance(transaction.account_id, -normalizeAmount(transaction.amount), { allowNegative: true });
 
     if (transaction.destination_account_id) {
-      await updateAccountBalance(transaction.destination_account_id, normalizeAmount(transaction.amount));
+      await updateAccountBalance(transaction.destination_account_id, normalizeAmount(transaction.amount), { allowNegative: true });
     }
   }
 }
 
 async function revertTransactionEffect(transaction: Transaction) {
   if (transaction.type === "DEBT_PAYMENT") {
-    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount), { allowNegative: true });
 
     if (transaction.debt_id) {
       await updateDebtBalance(transaction.debt_id, normalizeAmount(transaction.amount));
@@ -210,7 +212,7 @@ async function revertTransactionEffect(transaction: Transaction) {
       throw accountError ?? new Error("No se encontró la cuenta");
     }
 
-    const linkedDebtId = transaction.debt_id ?? account.debt_id ?? null;
+    const linkedDebtId = transaction.debt_id ?? null;
 
     if (account.type === "CREDIT_CARD") {
       // Tarjeta vinculada a una deuda: se revierte la deuda.
@@ -227,9 +229,9 @@ async function revertTransactionEffect(transaction: Transaction) {
   }
 
   if (transaction.type === "TRANSFER") {
-    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount));
+    await updateAccountBalance(transaction.account_id, normalizeAmount(transaction.amount), { allowNegative: true });
     if (transaction.destination_account_id) {
-      await updateAccountBalance(transaction.destination_account_id, -normalizeAmount(transaction.amount));
+      await updateAccountBalance(transaction.destination_account_id, -normalizeAmount(transaction.amount), { allowNegative: true });
     }
   }
 }
@@ -285,6 +287,20 @@ export async function updateAccount(id: string, payload: AccountPayload) {
 
 export async function deleteAccount(id: string) {
   const client = getClient();
+
+  const { data: relatedTransactions, error: relatedError } = await client
+    .from("transactions")
+    .select("id")
+    .or(`account_id.eq.${id},destination_account_id.eq.${id}`)
+    .limit(1);
+
+  if (relatedError) throw relatedError;
+  if ((relatedTransactions ?? []).length > 0) {
+    throw new Error(
+      "No puedes eliminar esta cuenta porque tiene movimientos asociados. Elimina primero sus movimientos."
+    );
+  }
+
   const { error } = await client.from("accounts").delete().eq("id", id);
   if (error) throw error;
 }
@@ -400,22 +416,51 @@ export async function createTransaction(payload: TransactionPayload) {
 
         insertDebtId = account.debt_id;
       } else {
-        // Tarjeta sin deuda vinculada: su current_balance es la deuda actual y
-        // su initial_balance es el límite de crédito.
-        const { data: card, error: cardError } = await client
-          .from("accounts")
-          .select("current_balance, initial_balance")
-          .eq("id", payload.accountId)
-          .single();
-
-        if (cardError || !card) {
-          throw cardError ?? new Error("No se encontró la cuenta");
-        }
-
-        if (normalizeAmount(card.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(card.initial_balance)) {
-          throw new Error("La compra excede el límite de la tarjeta.");
-        }
+        // Tarjeta sin deuda vinculada: no se permite cargar el saldo en la
+        // cuenta porque crearía un estado inconsistente (deuda duplicada si
+        // después se enlaza una deuda). Se requiere deuda asociada.
+        throw new Error(
+          "La tarjeta de crédito no tiene una deuda asociada. Créala desde la sección Deudas."
+        );
       }
+    }
+  }
+
+  // Validación de pago de deuda: el monto no puede exceder la deuda actual.
+  if (payload.type === "DEBT_PAYMENT") {
+    const debtId = payload.debtId ?? null;
+    if (!debtId) {
+      throw new Error("Selecciona la deuda que deseas pagar.");
+    }
+    const { data: debt, error: debtError } = await client
+      .from("debts")
+      .select("current_balance")
+      .eq("id", debtId)
+      .single();
+
+    if (debtError || !debt) {
+      throw debtError ?? new Error("No se encontró la deuda que deseas pagar.");
+    }
+
+    if (normalizeAmount(payload.amount) > normalizeAmount(debt.current_balance)) {
+      throw new Error("El pago no puede ser mayor a la deuda actual.");
+    }
+  }
+
+  // Validación de transferencia: el saldo de la cuenta de origen debe alcanzar.
+  if (payload.type === "TRANSFER") {
+    const { data: origin, error: originError } = await client
+      .from("accounts")
+      .select("current_balance")
+      .eq("id", payload.accountId)
+      .single();
+
+    if (originError || !origin) {
+      throw originError ?? new Error("No se encontró la cuenta de origen.");
+    }
+
+    if (normalizeAmount(payload.amount) > normalizeAmount(origin.current_balance)) {
+      throw new Error("Saldo insuficiente en la cuenta de origen para realizar la transferencia.");
     }
   }
 
@@ -456,11 +501,81 @@ export async function updateTransaction(id: string, payload: TransactionPayload)
     throw existingError ?? new Error("No se encontró la transacción");
   }
 
-  await revertTransactionEffect(existing as Transaction);
+  const existingTx = existing as Transaction;
 
-  // Validación similar a la creación: si el nuevo payload es un gasto sobre
-  // una tarjeta vinculada, validamos límite y asignamos la deuda.
+  // Validaciones atómicas: se ejecutan ANTES de revertir para no dejar la
+  // operación parcialmente aplicada si alguna falla.
   let updateDebtId: string | null = payload.debtId ?? null;
+
+  if (payload.type === "DEBT_PAYMENT") {
+    const debtId = payload.debtId ?? null;
+    if (!debtId) {
+      throw new Error("Selecciona la deuda que deseas pagar.");
+    }
+
+    // Saldo disponible en la cuenta que recibirá el pago. Si la cuenta no
+    // cambió, recuperamos el monto del pago actualmente aplicado.
+    const { data: payerAccount, error: payerError } = await client
+      .from("accounts")
+      .select("current_balance")
+      .eq("id", payload.accountId)
+      .single();
+
+    if (payerError || !payerAccount) {
+      throw payerError ?? new Error("No se encontró la cuenta");
+    }
+
+    const saldoActual = normalizeAmount(payerAccount.current_balance);
+    const mismaCuenta = existingTx.account_id === payload.accountId;
+    const disponibleCuenta = mismaCuenta
+      ? saldoActual + normalizeAmount(existingTx.amount)
+      : saldoActual;
+
+    if (normalizeAmount(payload.amount) > disponibleCuenta) {
+      throw new Error("Saldo insuficiente en la cuenta para realizar este pago.");
+    }
+
+    // El pago nuevo no puede exceder la deuda actual más el monto ya pagado.
+    const { data: debt, error: debtError } = await client
+      .from("debts")
+      .select("current_balance")
+      .eq("id", debtId)
+      .single();
+
+    if (debtError || !debt) {
+      throw debtError ?? new Error("No se encontró la deuda que deseas pagar.");
+    }
+
+    if (
+      normalizeAmount(payload.amount) >
+      normalizeAmount(debt.current_balance) + normalizeAmount(existingTx.amount)
+    ) {
+      throw new Error("El pago no puede ser mayor a la deuda actual.");
+    }
+  }
+
+  if (payload.type === "TRANSFER") {
+    const { data: origin, error: originError } = await client
+      .from("accounts")
+      .select("current_balance")
+      .eq("id", payload.accountId)
+      .single();
+
+    if (originError || !origin) {
+      throw originError ?? new Error("No se encontró la cuenta de origen.");
+    }
+
+    const saldoActual = normalizeAmount(origin.current_balance);
+    const mismaCuenta = existingTx.account_id === payload.accountId;
+    const disponible = mismaCuenta
+      ? saldoActual + normalizeAmount(existingTx.amount)
+      : saldoActual;
+
+    if (normalizeAmount(payload.amount) > disponible) {
+      throw new Error("Saldo insuficiente en la cuenta de origen para realizar la transferencia.");
+    }
+  }
+
   if (payload.type === "EXPENSE") {
     const { data: account, error: accountError } = await client
       .from("accounts")
@@ -484,30 +599,27 @@ export async function updateTransaction(id: string, payload: TransactionPayload)
           throw debtError ?? new Error("No se encontró la deuda asociada a la tarjeta");
         }
 
-        if (normalizeAmount(debt.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(debt.initial_amount)) {
+        if (
+          normalizeAmount(debt.current_balance) + normalizeAmount(payload.amount) >
+          normalizeAmount(debt.initial_amount)
+        ) {
           throw new Error("La compra excede el límite de la tarjeta.");
         }
 
         updateDebtId = account.debt_id;
       } else {
-        // Tarjeta sin deuda vinculada: su current_balance es la deuda actual y
-        // su initial_balance es el límite de crédito.
-        const { data: card, error: cardError } = await client
-          .from("accounts")
-          .select("current_balance, initial_balance")
-          .eq("id", payload.accountId)
-          .single();
-
-        if (cardError || !card) {
-          throw cardError ?? new Error("No se encontró la cuenta");
-        }
-
-        if (normalizeAmount(card.current_balance) + normalizeAmount(payload.amount) > normalizeAmount(card.initial_balance)) {
-          throw new Error("La compra excede el límite de la tarjeta.");
-        }
+        // Tarjeta sin deuda vinculada: no se permite cargar el saldo en la
+        // cuenta porque crearía un estado inconsistente (deuda duplicada si
+        // después se enlaza una deuda). Se requiere deuda asociada.
+        throw new Error(
+          "La tarjeta de crédito no tiene una deuda asociada. Créala desde la sección Deudas."
+        );
       }
     }
   }
+
+  // Solo después de validar todo, revertimos el efecto anterior y aplicamos el nuevo.
+  await revertTransactionEffect(existingTx);
 
   const { data, error } = await client
     .from("transactions")
@@ -752,6 +864,19 @@ export async function updateDebt(
 
 export async function deleteDebt(id: string) {
   const client = getClient();
+
+  const { data: relatedTransactions, error: relatedError } = await client
+    .from("transactions")
+    .select("id")
+    .eq("debt_id", id)
+    .limit(1);
+
+  if (relatedError) throw relatedError;
+  if ((relatedTransactions ?? []).length > 0) {
+    throw new Error(
+      "No puedes eliminar esta deuda porque tiene movimientos asociados. Elimina primero sus movimientos."
+    );
+  }
 
   const { error } = await client
     .from("debts")

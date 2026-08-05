@@ -6,46 +6,90 @@ import Icon from "@/components/ui/icon-material";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { listAccounts, listTransactions } from "@/services/finance";
-import type { Account, Transaction } from "@/types";
+import {
+  listAccounts,
+  listTransactions,
+  listDebts,
+  listCategories,
+} from "@/services/finance";
+import type { Account, Transaction, Debt, Category } from "@/types";
 
 function monthShort(d: Date) {
-  return d.toLocaleString("en-US", { month: "short" });
+  return d.toLocaleString("es-MX", { month: "short" });
 }
 
-function lastNMonths(n: number) {
-  const now = new Date();
-  return Array.from({ length: n }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (n - 1 - index), 1);
-    return {
-      label: monthShort(date),
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-    };
+function formatMoney(amount: number) {
+  return amount.toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
   });
+}
+
+function transactionLabel(type: Transaction["type"]) {
+  const labels: Record<Transaction["type"], string> = {
+    INCOME: "Ingreso",
+    EXPENSE: "Gasto",
+    TRANSFER: "Transferencia",
+    DEBT_PAYMENT: "Pago de deuda",
+  };
+  return labels[type];
+}
+
+function isCurrentMonth(dateStr: string) {
+  const now = new Date();
+  const [year, month] = dateStr.split("-").map(Number);
+  return year === now.getFullYear() && month === now.getMonth() + 1;
+}
+
+function formatDay(dateStr: string) {
+  const date = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDay(date, today)) return "Hoy";
+  if (sameDay(date, yesterday)) return "Ayer";
+  return `${date.getDate()} ${monthShort(date)}`;
 }
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRange, setSelectedRange] = useState(6);
-  const chartRanges = [3, 6, 12] as const;
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [accountData, transactionData] = await Promise.all([
-          listAccounts(),
-          listTransactions(),
-        ]);
+        const [accountData, transactionData, debtData, categoryData] =
+          await Promise.all([
+            listAccounts(),
+            listTransactions(),
+            listDebts(),
+            listCategories(),
+          ]);
 
         setAccounts(accountData);
         setTransactions(transactionData);
-      } catch (error) {
-        console.error("Error cargando datos del dashboard:", error);
+        setDebts(debtData);
+        setCategories(categoryData);
+        setError(null);
+      } catch (err) {
+        console.error("Error cargando datos del dashboard:", err);
+        setError(
+          err instanceof Error
+            ? "No se pudieron cargar tus datos. Intenta de nuevo."
+            : "Ocurrió un error inesperado."
+        );
       } finally {
         setLoading(false);
       }
@@ -54,370 +98,385 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
-  const totalBalance = accounts.reduce(
-    (total, account) => total + Number(account.current_balance || 0),
-    0
+  // Dinero disponible = cuentas que NO son tarjeta de crédito (la tarjeta
+  // representa deuda, no saldo disponible).
+  const availableMoney = useMemo(
+    () =>
+      accounts
+        .filter((account) => account.type !== "CREDIT_CARD")
+        .reduce((total, account) => total + Number(account.current_balance || 0), 0),
+    [accounts]
   );
 
-  const formatMoney = (amount: number) =>
-    amount.toLocaleString("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    });
+  // Totales del mes actual (excluye TRANSFER y DEBT_PAYMENT).
+  const { monthlyIncome, monthlyExpense, monthlyBalance } = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      if (!isCurrentMonth(t.transaction_date)) continue;
+      if (t.type === "INCOME") income += Number(t.amount);
+      else if (t.type === "EXPENSE") expense += Number(t.amount);
+    }
+    return { monthlyIncome: income, monthlyExpense: expense, monthlyBalance: income - expense };
+  }, [transactions]);
 
-  const accountTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      CASH: "Efectivo",
-      BANK: "Banco",
-      CREDIT_CARD: "Tarjeta de crédito",
-      SAVINGS: "Ahorro",
-      INVESTMENT: "Inversión",
-      OTHER: "Otro",
-    };
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const c of categories) map.set(c.id, c);
+    return map;
+  }, [categories]);
 
-    return types[type] ?? type;
+  // Tarjetas de crédito: cuentas tipo CREDIT_CARD con su deuda asociada.
+  const creditCards = useMemo(() => {
+    const debtMap = new Map<string, Debt>();
+    for (const d of debts) debtMap.set(d.id, d);
+
+    return accounts
+      .filter((account) => account.type === "CREDIT_CARD")
+      .map((account) => {
+        // Deuda enlazada si existe; si no, el saldo de la cuenta es la deuda.
+        const linkedDebt = account.debt_id ? debtMap.get(account.debt_id) : undefined;
+        const current = Number(
+          linkedDebt ? linkedDebt.current_balance : account.current_balance || 0
+        );
+        const limit = Number(
+          linkedDebt ? linkedDebt.initial_amount : account.initial_balance || 0
+        );
+        const available = limit - current;
+        const usedPercent = limit > 0 ? (current / limit) * 100 : 0;
+        return {
+          id: account.id,
+          name: account.name,
+          current,
+          limit,
+          available,
+          usedPercent,
+        };
+      });
+  }, [accounts, debts]);
+
+  const totalUsedCredit = creditCards.reduce((sum, c) => sum + c.current, 0);
+  const totalAvailableCredit = creditCards.reduce((sum, c) => sum + c.available, 0);
+
+  // Resumen de deudas (todas, incluidas tarjetas en deudas sueltas).
+  const totalDebt = debts.reduce((sum, d) => sum + Number(d.current_balance || 0), 0);
+  const upcomingDues = useMemo(() => {
+    return debts
+      .filter((d) => d.due_date)
+      .slice()
+      .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
+      .slice(0, 3)
+      .map((d) => ({
+        id: d.id,
+        name: d.name,
+        dueDate: d.due_date!,
+      }));
+  }, [debts]);
+
+  // Últimos movimientos (top 5).
+  const recentTransactions = useMemo(
+    () =>
+      transactions
+        .slice()
+        .sort((a, b) => (a.transaction_date < b.transaction_date ? 1 : -1))
+        .slice(0, 5),
+    [transactions]
+  );
+
+  const typeBadgeClass: Record<Transaction["type"], string> = {
+    INCOME: "bg-emerald-50 text-emerald-700",
+    EXPENSE: "bg-rose-50 text-rose-700",
+    TRANSFER: "bg-sky-50 text-sky-700",
+    DEBT_PAYMENT: "bg-violet-50 text-violet-700",
   };
 
-  const monthlyExpenseHistory = useMemo(() => {
-    const months = lastNMonths(selectedRange);
-    return months.map((month) => {
-      const total = transactions
-        .filter((transaction) => {
-          const [year, monthIndex] = transaction.transaction_date.split("-");
-          return (
-            Number(year) === month.year &&
-            Number(monthIndex) === month.month &&
-            transaction.type === "EXPENSE"
-          );
-        })
-        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const quickActions: {
+    label: string;
+    icon: string;
+    href: string;
+    className: string;
+  }[] = [
+    {
+      label: "Ingreso",
+      icon: "add",
+      href: "/transactions?type=INCOME",
+      className: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    },
+    {
+      label: "Gasto",
+      icon: "remove",
+      href: "/transactions?type=EXPENSE",
+      className: "bg-rose-600 hover:bg-rose-700 text-white",
+    },
+    {
+      label: "Transferencia",
+      icon: "swap_horiz",
+      href: "/transactions?type=TRANSFER",
+      className: "bg-sky-600 hover:bg-sky-700 text-white",
+    },
+    {
+      label: "Pago tarjeta",
+      icon: "credit_card",
+      href: "/transactions?type=DEBT_PAYMENT",
+      className: "bg-violet-600 hover:bg-violet-700 text-white",
+    },
+  ];
 
-      return { ...month, total };
-    });
-  }, [selectedRange, transactions]);
+  if (loading) {
+    return (
+      <div className="space-y-6 p-2 sm:p-4">
+        <div className="h-40 animate-pulse rounded-[32px] bg-slate-200/70" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="h-28 animate-pulse rounded-[24px] bg-slate-200/70" />
+          <div className="h-28 animate-pulse rounded-[24px] bg-slate-200/70" />
+        </div>
+        <div className="h-40 animate-pulse rounded-[24px] bg-slate-200/70" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-2 sm:p-4">
+        <Card>
+          <CardContent className="space-y-4 py-6 text-center">
+            <p className="text-sm text-slate-600">{error}</p>
+            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-2 sm:p-4">
-
-      <Card className="overflow-hidden rounded-[32px] p-0">
-
-        <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-5 py-6 text-white sm:px-6">
-
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm opacity-90">
-                Resumen
-              </p>
-
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-                {formatMoney(totalBalance)}
-              </h1>
-            </div>
-
-            <div className="inline-flex items-center gap-2 rounded-3xl bg-white/15 px-3 py-2 text-sm text-white backdrop-blur">
-              <Icon name="sparkles" className="h-4 w-4" />
-              Balance actualizado
-            </div>
-          </div>
-
-
-          <div className="mt-6 h-56 rounded-[32px] bg-white/10 p-4 text-sm">
-
-            <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/80">
-              <span>Feb</span>
-              <span>Jul</span>
-            </div>
-
-            <div className="relative mt-4 h-full">
-              <div className="absolute inset-x-0 bottom-0 grid grid-cols-6 gap-3">
-
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className={`mx-auto inline-flex h-full w-3 rounded-full bg-white/50 ${
-                      index === 4
-                        ? "h-[55%]"
-                        : index === 3
-                        ? "h-[48%]"
-                        : index === 2
-                        ? "h-[40%]"
-                        : index === 1
-                        ? "h-[35%]"
-                        : index === 0
-                        ? "h-[30%]"
-                        : "h-[48%]"
-                    }`}
-                  />
-                ))}
-
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div className="space-y-4 bg-white px-5 py-5 sm:px-6">
-
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Mis cuentas
-              </p>
-
-              <p className="text-xs text-slate-400">
-                Administra tus bancos, efectivo e inversiones
-              </p>
-            </div>
-
-
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-              {accounts.length}
-            </span>
-
-          </div>
-
-
-
-          <div className="grid gap-3 sm:grid-cols-2">
-
-            {loading && (
-              <p className="text-sm text-slate-500">
-                Cargando cuentas...
-              </p>
-            )}
-
-
-            {!loading && accounts.length === 0 && (
-              <p className="text-sm text-slate-500">
-                Todavía no tienes cuentas registradas.
-              </p>
-            )}
-
-
-
-            {accounts.map((account) => (
-
-              <div
-                key={account.id}
-                className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
-              >
-
-                <p className="font-semibold text-slate-900">
-                  {account.name}
-                </p>
-
-
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {formatMoney(Number(account.current_balance))}
-                </p>
-
-
-                <p className="mt-1 text-xs text-slate-500">
-                  {accountTypeLabel(account.type)}
-                </p>
-
-              </div>
-
-            ))}
-
-          </div>
-
-
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-
-
-            <Link href="/accounts">
-
-              <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700">
-
-                <Icon name="add" className="h-4 w-4" />
-
-                Agregar cuenta
-
-              </Button>
-
-            </Link>
-
-
-
-            <Link href="/transactions">
-
-              <Button
-                variant="outline"
-                className="w-full"
-              >
-
-                Registrar movimiento
-
-                <Icon name="arrow_right" className="h-4 w-4" />
-
-              </Button>
-
-            </Link>
-
-
-          </div>
-
-
-        </div>
-
-
-      </Card>
-
-
-
-
-
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-
-
-        <Card>
-
-          <CardHeader>
-
-            <CardTitle>
-              Gasto mensual
-            </CardTitle>
-
-            <CardDescription>
-              Visualiza el gasto frente a ingresos en el periodo.
-            </CardDescription>
-
-            <Badge className="bg-sky-50 text-sky-700">
-              Nuevo
-            </Badge>
-
-          </CardHeader>
-
-
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-4 rounded-[28px] bg-slate-50 px-4 py-3 text-sm text-slate-500">
-              <span>Últimos {selectedRange} meses</span>
-              <div className="flex flex-wrap gap-2">
-                {chartRanges.map((range) => (
-                  <button
-                    key={range}
-                    type="button"
-                    onClick={() => setSelectedRange(range)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                      selectedRange === range
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
-                    }`}
-                  >
-                    {range} meses
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {monthlyExpenseHistory.every((item) => item.total === 0) ? (
-              <div className="rounded-[28px] bg-slate-50 p-8 text-center text-sm text-slate-500">
-                No hay gastos registrados en este rango.
-              </div>
-            ) : (
-              <div className="rounded-[28px] bg-slate-50 p-4">
-                <div className="flex items-end gap-2 h-52">
-                  {monthlyExpenseHistory.map((month) => {
-                    const max = Math.max(1, ...monthlyExpenseHistory.map((item) => item.total));
-                    const height = Math.max(28, (month.total / max) * 192);
-
-                    return (
-                      <div key={`${month.label}-${month.year}`} className="flex-1">
-                        <div className="group relative mx-auto flex h-full w-full items-end justify-center">
-                          <div className="absolute -top-9 left-1/2 flex -translate-x-1/2 items-center justify-center whitespace-nowrap rounded-full bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition duration-200 group-hover:opacity-100">
-                            {formatMoney(month.total)}
-                          </div>
-                          <div
-                            style={{ height: `${height}px` }}
-                            className="w-full rounded-full bg-gradient-to-b from-sky-500 to-slate-200"
-                            title={`${month.label} ${month.year}: ${formatMoney(month.total)}`}
-                          />
-                        </div>
-                        <p className="mt-3 text-center text-xs text-slate-400">
-                          {month.label}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </CardContent>
-
-        </Card>
-
-
-
-
-
-        <Card>
-
-          <CardHeader>
-
-            <CardTitle>
-              Saldo neto
-            </CardTitle>
-
-            <CardDescription>
-              Resumen rápido de patrimonio y tendencias.
-            </CardDescription>
-
-          </CardHeader>
-
-
-
-          <CardContent>
-
-            <div className="space-y-4 rounded-[28px] bg-slate-50 p-4">
-
-
-              <div className="rounded-3xl bg-white p-4 shadow-sm">
-
-                <p className="text-sm text-slate-500">
-                  Patrimonio actual
-                </p>
-
-
-                <p className="mt-2 text-3xl font-semibold">
-                  {formatMoney(totalBalance)}
-                </p>
-
-
-              </div>
-
-
-
-              <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4">
-
-                <p className="font-semibold">
-                  Cuentas activas
-                </p>
-
-                <p className="font-semibold">
-                  {accounts.length}
-                </p>
-
-              </div>
-
-
-
-            </div>
-
-          </CardContent>
-
-
-        </Card>
-
-
+      {/* Bloque principal: dinero disponible */}
+      <div className="rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-6 py-7 text-white shadow-lg shadow-indigo-500/20">
+        <p className="text-sm opacity-90">Dinero disponible</p>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+          {formatMoney(availableMoney)}
+        </h1>
+        <p className="mt-2 text-xs opacity-80">
+          Saldo de tus cuentas (sin deudas de tarjeta)
+        </p>
       </div>
 
+      {/* Resumen del periodo */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardContent className="space-y-4 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Ingresos</p>
+                <p className="mt-1 text-3xl font-extrabold text-emerald-600">
+                  {formatMoney(monthlyIncome)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600">
+                <Icon name="arrow_downward" className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardContent className="space-y-4 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-600">Gastos</p>
+                <p className="mt-1 text-3xl font-extrabold text-rose-600">
+                  {formatMoney(monthlyExpense)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-rose-50 p-3 text-rose-600">
+                <Icon name="arrow_upward" className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="flex items-center justify-between py-4">
+          <p className="text-lg font-bold text-slate-900">Balance del mes</p>
+          <p
+            className={`text-lg font-semibold ${
+              monthlyBalance >= 0 ? "text-emerald-600" : "text-rose-600"
+            }`}
+          >
+            {monthlyBalance >= 0 ? "+" : "-"}
+            {formatMoney(Math.abs(monthlyBalance))}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Tarjetas de crédito */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tarjetas de crédito</CardTitle>
+          <Badge className="bg-violet-50 text-violet-700">{
+            creditCards.length
+          }</Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {creditCards.length === 0 ? (
+            <p className="text-sm text-slate-500">No tienes tarjetas registradas.</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">
+                  {formatMoney(totalUsedCredit)} utilizados
+                </span>
+                <span className="font-medium text-slate-700">
+                  {formatMoney(totalAvailableCredit)} disponibles
+                </span>
+              </div>
+              <div className="space-y-4">
+                {creditCards.map((card) => (
+                  <div key={card.id}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-slate-800">
+                        {card.name}
+                      </span>
+                      <span className="text-slate-500">
+                        {formatMoney(card.current)} / {formatMoney(card.limit)}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-lg bg-slate-100">
+                      <div
+                        className="h-full rounded-lg bg-gradient-to-r from-violet-500 to-indigo-500"
+                        style={{ width: `${Math.min(100, card.usedPercent)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <Link href="/debts" className="block">
+            <Button variant="outline" className="w-full">
+              Ver tarjetas y deudas
+              <Icon name="arrow_right" className="h-4 w-4" />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Deudas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Deudas</CardTitle>
+          <Badge className="bg-amber-50 text-amber-700">{debts.length}</Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Deuda total</p>
+              <p className="mt-1 text-3xl font-extrabold text-slate-900">
+                {formatMoney(totalDebt)}
+              </p>
+            </div>
+            <div className="text-right text-xs text-slate-400">
+              {debts.length} deuda{debts.length === 1 ? "" : "s"} activa
+              {debts.length === 1 ? "" : "s"}
+            </div>
+          </div>
+
+          {upcomingDues.length > 0 && (
+            <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Próximos vencimientos
+              </p>
+              {upcomingDues.map((due) => (
+                <div
+                  key={due.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-slate-700">{due.name}</span>
+                  <span className="text-slate-500">
+                    {new Date(due.dueDate + "T00:00:00").getDate()}{" "}
+                    {monthShort(new Date(due.dueDate + "T00:00:00"))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Link href="/debts" className="block">
+            <Button variant="outline" className="w-full">
+              Administrar deudas
+              <Icon name="arrow_right" className="h-4 w-4" />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Últimos movimientos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Últimos movimientos</CardTitle>
+          <Link href="/transactions">
+            <span className="text-xs font-semibold text-indigo-600">Ver todos</span>
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {recentTransactions.length === 0 ? (
+            <p className="text-sm text-slate-500">Aún no hay movimientos.</p>
+          ) : (
+            recentTransactions.map((t) => {
+              const category = t.category_id ? categoryMap.get(t.category_id) : undefined;
+              const isPositive = t.type === "INCOME";
+              const sign = t.type === "INCOME" ? "+" : "-";
+              const label =
+                t.description?.trim() ||
+                category?.name ||
+                transactionLabel(t.type);
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between py-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold ${typeBadgeClass[t.type]}`}
+                    >
+                      {transactionLabel(t.type)}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{label}</p>
+                      <p className="text-xs text-slate-400">
+                        {formatDay(t.transaction_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <p
+                    className={`text-sm font-semibold ${
+                      isPositive ? "text-emerald-600" : "text-slate-700"
+                    }`}
+                  >
+                    {sign}
+                    {formatMoney(Number(t.amount))}
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Acciones rápidas */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {quickActions.map((action) => (
+          <Link key={action.label} href={action.href} className="block">
+            <div
+              className={`flex h-20 flex-col items-center justify-center gap-1 rounded-xl ${action.className} transition`}
+            >
+              <Icon name={action.icon} className="h-5 w-5" />
+              <span className="text-xs font-semibold">{action.label}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

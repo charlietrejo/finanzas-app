@@ -17,6 +17,7 @@ import {
     deleteDebt,
     listDebts,
     updateDebt,
+    createAccount,
 } from "@/services/finance";
 
 
@@ -159,7 +160,21 @@ export default function DebtsPage() {
                     dueDate: payload.dueDate,
                 });
             } else {
-                await createDebt(payload);
+                const created = await createDebt(payload);
+
+                // Cuando se crea una tarjeta de crédito, generamos también la
+                // cuenta enlazada para que sea seleccionable en Movimientos.
+                // La cuenta lleva el límite en initial_balance y la deuda en
+                // current_balance; debt_id la vincula a la deuda recién creada.
+                if (payload.type === "CREDIT_CARD" && created?.id) {
+                    await createAccount({
+                        name: payload.name,
+                        type: "CREDIT_CARD",
+                        initialBalance: payload.initialAmount,
+                        currentBalance: payload.currentBalance,
+                        debtId: created.id,
+                    });
+                }
             }
 
 
@@ -216,7 +231,7 @@ export default function DebtsPage() {
                     >
 
                         <input
-                            className="w-full rounded-2xl border bg-slate-50 px-4 py-3"
+                            className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base"
                             placeholder="Nombre de la deuda"
                             value={form.name}
                             onChange={(e) =>
@@ -226,7 +241,7 @@ export default function DebtsPage() {
 
 
                         <select
-                            className="w-full rounded-2xl border bg-slate-50 px-4 py-3"
+                            className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base"
                             value={form.type}
                             onChange={(e) =>
                                 setForm({
@@ -253,7 +268,7 @@ export default function DebtsPage() {
                         <div className="grid gap-3 sm:grid-cols-2">
 
                             <div className="space-y-1">
-                                <label className="text-sm font-medium text-slate-600">
+                                <label className="text-sm font-medium text-slate-500">
                                     {form.type === "CREDIT_CARD"
                                         ? "Límite de crédito"
                                         : "Monto original"}
@@ -261,7 +276,7 @@ export default function DebtsPage() {
 
                                 <input
                                     type="number"
-                                    className="w-full rounded-2xl border bg-slate-50 px-4 py-3"
+                                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base"
                                     placeholder={
                                         form.type === "CREDIT_CARD"
                                             ? "Ej. 50000"
@@ -278,13 +293,13 @@ export default function DebtsPage() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-sm font-medium text-slate-600">
+                                <label className="text-sm font-medium text-slate-500">
                                     Saldo pendiente
                                 </label>
 
                                 <input
                                     type="number"
-                                    className="w-full rounded-2xl border bg-slate-50 px-4 py-3"
+                                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base"
                                     placeholder={
                                         form.type === "CREDIT_CARD"
                                             ? "Ej. 12000"
@@ -305,7 +320,7 @@ export default function DebtsPage() {
 
                         <input
                             type="date"
-                            className="w-full rounded-2xl border bg-slate-50 px-4 py-3"
+                            className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base"
                             value={form.dueDate}
                             onChange={(e) =>
                                 setForm({
@@ -317,7 +332,7 @@ export default function DebtsPage() {
 
                         {
                             error &&
-                            <p className="text-sm text-red-600">
+                            <p className="text-sm text-rose-600">
                                 {error}
                             </p>
                         }
@@ -378,7 +393,7 @@ export default function DebtsPage() {
 
                             <div
                                 key={debt.id}
-                                className="rounded-3xl border bg-slate-50 p-4"
+                                className="rounded-[24px] border border-slate-200/70 bg-white/90 p-4 shadow-sm shadow-slate-200/60 backdrop-blur"
                             >
 
                                 <div className="flex justify-between">

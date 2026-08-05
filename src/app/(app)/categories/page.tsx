@@ -109,13 +109,13 @@ export default function CategoriesPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <input
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               placeholder="Nombre de la categoría"
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
             />
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               value={form.type}
               onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as CategoryType }))}
             >
@@ -126,7 +126,7 @@ export default function CategoriesPage() {
               ))}
             </select>
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               value={form.parentId}
               onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}
             >
@@ -141,13 +141,13 @@ export default function CategoriesPage() {
             </select>
             <div className="grid gap-3 sm:grid-cols-2">
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Icono"
                 value={form.icon}
                 onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))}
               />
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Color"
                 value={form.color}
                 onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))}

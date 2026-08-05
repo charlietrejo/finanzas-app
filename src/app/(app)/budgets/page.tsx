@@ -136,7 +136,7 @@ export default function BudgetsPage() {
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <select
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               value={form.categoryId}
               onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
             >
@@ -151,13 +151,13 @@ export default function BudgetsPage() {
               <input
                 type="number"
                 step="0.01"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 placeholder="Monto del presupuesto"
                 value={form.amount}
                 onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
               />
               <select
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
                 value={form.period}
                 onChange={(event) => setForm((current) => ({ ...current, period: event.target.value as typeof emptyForm.period }))}
               >
@@ -170,7 +170,7 @@ export default function BudgetsPage() {
             </div>
             <input
               type="date"
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-base outline-none"
               value={form.startDate}
               onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))}
             />
