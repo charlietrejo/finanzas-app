@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, Mail, UserRound } from "lucide-react";
 
@@ -11,13 +11,14 @@ type AuthFormMode = "login" | "register" | "forgot";
 
 export function AuthForm({ mode }: { mode: AuthFormMode }) {
   const router = useRouter();
-  const { signIn, signUp, resetPassword, resendConfirmation } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmation, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,7 +33,9 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
           setError(response.error.message);
           return;
         }
-        router.replace("/dashboard");
+        // No navegamos de inmediato: esperamos a que AuthProvider confirme la
+        // sesión (user) para evitar una carrera con AuthGuard en Safari/iOS.
+        setPendingRedirect(true);
         return;
       }
 
@@ -80,6 +83,12 @@ export function AuthForm({ mode }: { mode: AuthFormMode }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pendingRedirect && user) {
+      router.replace("/dashboard");
+    }
+  }, [pendingRedirect, user, router]);
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>

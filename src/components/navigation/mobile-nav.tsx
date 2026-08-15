@@ -10,7 +10,6 @@ const items = [
   { href: "/dashboard", label: "Inicio", icon: LayoutGrid },
   { href: "/analytics", label: "Análisis", icon: BarChart3 },
   { href: "/transactions", label: "Mov.", icon: ListChecks, primary: true },
-  { href: "/goals", label: "Metas", icon: CreditCard },
   { href: "/debts", label: "Deudas", icon: CreditCard },
   { href: "/settings", label: "Más", icon: Settings },
 ];
@@ -33,7 +32,7 @@ export function MobileNav({ className }: { className?: string }) {
                 "flex flex-1 flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-semibold transition",
                 isActive
                   ? item.primary
-                    ? "bg-gradient-to-br from-sky-500 to-fuchsia-500 text-white shadow-lg shadow-sky-500/20"
+                    ? "bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 text-white shadow-lg shadow-indigo-500/20"
                       : "bg-slate-200 text-slate-900"
                   : "text-slate-600 hover:bg-slate-100",
                 item.primary && "rounded-full"

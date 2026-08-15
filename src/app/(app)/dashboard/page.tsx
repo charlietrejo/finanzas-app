@@ -59,6 +59,37 @@ function formatDay(dateStr: string) {
   return `${date.getDate()} ${monthShort(date)}`;
 }
 
+function useCountUp(target: number, durationMs = 900) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      queueMicrotask(() => setValue(target));
+      return;
+    }
+
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(target * eased);
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setValue(target);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+
+  return value;
+}
+
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -84,10 +115,32 @@ export default function DashboardPage() {
         setCategories(categoryData);
         setError(null);
       } catch (err) {
+        // Promise.all rechaza con el primer error, pero oculta qué consulta
+        // falló. Ejecutamos cada una de forma aislada para etiquetar el origen
+        // y revelar el mensaje real de Supabase (no el "{}" del console.error).
+        const probes: Array<[string, () => Promise<unknown>]> = [
+          ["cuentas", listAccounts],
+          ["transacciones", listTransactions],
+          ["deudas", listDebts],
+          ["categorías", listCategories],
+        ];
+        for (const [label, fn] of probes) {
+          try {
+            await fn();
+          } catch (e) {
+            console.error(`[dashboard] Falló la carga de ${label}:`, e);
+            if (!err) err = e;
+          }
+        }
+
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? (err as { message?: string }).message
+            : String(err);
         console.error("Error cargando datos del dashboard:", err);
         setError(
-          err instanceof Error
-            ? "No se pudieron cargar tus datos. Intenta de nuevo."
+          message
+            ? `No se pudieron cargar tus datos (${message}). Intenta de nuevo.`
             : "Ocurrió un error inesperado."
         );
       } finally {
@@ -107,6 +160,8 @@ export default function DashboardPage() {
         .reduce((total, account) => total + Number(account.current_balance || 0), 0),
     [accounts]
   );
+
+  const animatedAvailable = useCountUp(availableMoney);
 
   // Totales del mes actual (excluye TRANSFER y DEBT_PAYMENT).
   const { monthlyIncome, monthlyExpense, monthlyBalance } = useMemo(() => {
@@ -194,37 +249,52 @@ export default function DashboardPage() {
     label: string;
     icon: string;
     href: string;
-    className: string;
+    bg: string;
+    border: string;
+    iconColor: string;
+    shadow: string;
   }[] = [
     {
       label: "Ingreso",
       icon: "add",
       href: "/transactions?type=INCOME",
-      className: "bg-emerald-600 hover:bg-emerald-700 text-white",
+      bg: "bg-emerald-50",
+      border: "border-emerald-200",
+      iconColor: "text-emerald-600",
+      shadow: "shadow-emerald-200/70",
     },
     {
       label: "Gasto",
       icon: "remove",
       href: "/transactions?type=EXPENSE",
-      className: "bg-rose-600 hover:bg-rose-700 text-white",
+      bg: "bg-rose-50",
+      border: "border-rose-200",
+      iconColor: "text-rose-600",
+      shadow: "shadow-rose-200/70",
     },
     {
       label: "Transferencia",
       icon: "swap_horiz",
       href: "/transactions?type=TRANSFER",
-      className: "bg-sky-600 hover:bg-sky-700 text-white",
+      bg: "bg-sky-50",
+      border: "border-sky-200",
+      iconColor: "text-sky-600",
+      shadow: "shadow-sky-200/70",
     },
     {
       label: "Pago tarjeta",
       icon: "credit_card",
       href: "/transactions?type=DEBT_PAYMENT",
-      className: "bg-violet-600 hover:bg-violet-700 text-white",
+      bg: "bg-violet-50",
+      border: "border-violet-200",
+      iconColor: "text-violet-600",
+      shadow: "shadow-violet-200/70",
     },
   ];
 
   if (loading) {
     return (
-      <div className="space-y-6 p-2 sm:p-4">
+      <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
         <div className="h-40 animate-pulse rounded-[32px] bg-slate-200/70" />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="h-28 animate-pulse rounded-[24px] bg-slate-200/70" />
@@ -237,7 +307,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="space-y-6 p-2 sm:p-4">
+      <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
         <Card>
           <CardContent className="space-y-4 py-6 text-center">
             <p className="text-sm text-slate-600">{error}</p>
@@ -249,12 +319,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-2 sm:p-4">
+    <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
       {/* Bloque principal: dinero disponible */}
       <div className="rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-6 py-7 text-white shadow-lg shadow-indigo-500/20">
         <p className="text-sm opacity-90">Dinero disponible</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-          {formatMoney(availableMoney)}
+          {formatMoney(animatedAvailable)}
         </h1>
         <p className="mt-2 text-xs opacity-80">
           Saldo de tus cuentas (sin deudas de tarjeta)
@@ -467,12 +537,10 @@ export default function DashboardPage() {
       {/* Acciones rápidas */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {quickActions.map((action) => (
-          <Link key={action.label} href={action.href} className="block">
-            <div
-              className={`flex h-20 flex-col items-center justify-center gap-1 rounded-xl ${action.className} transition`}
-            >
-              <Icon name={action.icon} className="h-5 w-5" />
-              <span className="text-xs font-semibold">{action.label}</span>
+          <Link key={action.label} href={action.href} className="block tap-feedback">
+            <div className={`flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border ${action.border} ${action.bg} shadow-sm ${action.shadow} transition active:scale-[0.98]`}>
+              <Icon name={action.icon} className={`h-6 w-6 ${action.iconColor}`} />
+              <span className="text-xs font-semibold text-slate-700">{action.label}</span>
             </div>
           </Link>
         ))}
