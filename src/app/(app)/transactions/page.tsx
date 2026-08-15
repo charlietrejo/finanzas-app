@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "@/components/ui/icon-material";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,10 @@ export default function TransactionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Key de idempotencia estable por "intención de operación". Se renueva solo
+  // al resetear el formulario, de modo que doble-click o reintentos de red
+  // reusen la misma clave y createTransaction no duplique el efecto.
+  const idempotencyRef = useRef<string>(crypto.randomUUID());
 
   const loadData = async () => {
     setLoading(true);
@@ -114,10 +118,11 @@ export default function TransactionsPage() {
       if (editingId) {
         await updateTransaction(editingId, payload);
       } else {
-        await createTransaction(payload);
+        await createTransaction({ ...payload, idempotencyKey: idempotencyRef.current });
       }
 
       setForm(emptyForm);
+      idempotencyRef.current = crypto.randomUUID();
       setEditingId(null);
       await loadData();
     } catch (err) {
