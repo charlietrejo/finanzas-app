@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from "@/co
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const modules = [
   {
     title: "Cuentas",
@@ -44,8 +44,8 @@ export default function SettingsPage() {
 ];
 
   const handleLogout = async () => {
-    await signOut();
-    router.replace("/login");
+    // Invalidación server-side de la sesión (borra cookies de forma fiable).
+    window.location.href = "/auth/signout";
   };
 
   return (
