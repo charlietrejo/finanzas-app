@@ -60,6 +60,20 @@ button {
   min-height: 3rem;
 }
 
+/* Date picker: oculta el indicador nativo (que se ve desalineado en algunos
+   navegadores) y deja el input completo capturando el click para abrir el
+   calendario; el icono visible lo aporta el componente Icon en la página. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 * {
   box-sizing: border-box;
 }

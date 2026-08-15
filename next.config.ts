@@ -23,7 +23,11 @@ const nextConfig: NextConfig = {
       connectSources.push("http://localhost:*", "ws://localhost:*");
     }
 
-    const scriptSources = isProd ? ["'self'"] : ["'self'", "'unsafe-inline'"];
+    // En DESARROLLO, React 19 requiere 'unsafe-eval' para sus utilidades de
+    // debugging (reconstrucción de callstacks de errores). En PRODUCCIÓN React
+    // nunca usa eval(), por lo que el CSP queda estricto solo con 'self'
+    // (cumple el requisito de seguridad sin relajar producción).
+    const scriptSources = isProd ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"];
 
     const csp = [
       "default-src 'self'",
