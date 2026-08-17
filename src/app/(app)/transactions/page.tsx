@@ -579,7 +579,7 @@ export default function TransactionsPage() {
             return (
               <div
                 key={transaction.id}
-                className="grid grid-cols-[5.5rem_1fr] items-center divide-x divide-slate-100 py-3 first:pt-0 last:pb-0 sm:grid-cols-[7rem_1fr_auto]"
+                className="grid grid-cols-[5.5rem_1fr] items-start gap-y-2 divide-x divide-slate-100 py-3 first:pt-0 last:pb-0 sm:grid-cols-[6rem_1fr_auto_auto] sm:items-center sm:gap-y-0"
               >
                 <span className={`mx-auto w-fit truncate rounded-lg px-2 py-0.5 text-center text-[10px] font-semibold ${typeBadgeClass[transaction.type]}`}>
                   {typeLabel[transaction.type]}
@@ -599,19 +599,16 @@ export default function TransactionsPage() {
                     {transaction.type === "TRANSFER" && destination ? ` → ${destination.name}` : ""}
                     {category ? ` · ${category.name}` : ""}
                   </p>
+                  <p className={`mt-1 text-sm font-semibold sm:hidden ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
+                    {sign}
+                    {formatMoney(Number(transaction.amount))}
+                  </p>
                 </div>
-                <p className={`px-1 text-right text-sm font-semibold ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
+                <p className={`hidden px-1 text-right text-sm font-semibold sm:block ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
                   {sign}
                   {formatMoney(Number(transaction.amount))}
                 </p>
-              </div>
-            );
-          })}
-
-          {visibleTransactions.length > 0 && (
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
-              {visibleTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex gap-2">
+                <div className="col-span-2 flex justify-end gap-2 sm:col-span-1">
                   <Button type="button" variant="outline" size="sm" onClick={() => handleEdit(transaction)}>
                     <Icon name="edit" className="h-4 w-4" />
                     Editar
@@ -621,9 +618,9 @@ export default function TransactionsPage() {
                     Eliminar
                   </Button>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
     </div>
