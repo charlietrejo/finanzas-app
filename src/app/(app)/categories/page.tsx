@@ -10,6 +10,11 @@ import type { Category, CategoryType } from "@/types";
 
 const categoryTypes: CategoryType[] = ["INCOME", "EXPENSE"];
 
+const categoryTypeLabels: Record<CategoryType, string> = {
+  INCOME: "Ingreso",
+  EXPENSE: "Gasto",
+};
+
 const emptyForm = {
   name: "",
   type: "EXPENSE" as CategoryType,
@@ -121,7 +126,7 @@ export default function CategoriesPage() {
             >
               {categoryTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {categoryTypeLabels[type]}
                 </option>
               ))}
             </select>

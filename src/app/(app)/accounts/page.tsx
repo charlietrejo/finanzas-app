@@ -10,12 +10,12 @@ import type { AccountPayload } from "@/services/finance";
 import type { Account, AccountType, Debt } from "@/types";
 
 const accountTypes = [
-  { value: "CASH", label: "💵 Efectivo" },
-  { value: "BANK", label: "🏦 Cuenta bancaria" },
-  { value: "CREDIT_CARD", label: "💳 Tarjeta de crédito" },
-  { value: "SAVINGS", label: "🐷 Ahorro" },
-  { value: "INVESTMENT", label: "📈 Inversión" },
-  { value: "OTHER", label: "📦 Otro" },
+  { value: "CASH", label: "Efectivo" },
+  { value: "BANK", label: "Cuenta bancaria" },
+  { value: "CREDIT_CARD", label: "Tarjeta de crédito" },
+  { value: "SAVINGS", label: "Ahorro" },
+  { value: "INVESTMENT", label: "Inversión" },
+  { value: "OTHER", label: "Otro" },
 ] as const;
 
 const emptyForm = {
@@ -126,12 +126,12 @@ export default function AccountsPage() {
 
   const accountTypeLabel = (type: string) => {
     const types: Record<string, string> = {
-      CASH: "💵 Efectivo",
-      BANK: "🏦 Cuenta bancaria",
-      CREDIT_CARD: "💳 Tarjeta de crédito",
-      SAVINGS: "🐷 Ahorro",
-      INVESTMENT: "📈 Inversión",
-      OTHER: "📦 Otro",
+      CASH: "Efectivo",
+      BANK: "Cuenta bancaria",
+      CREDIT_CARD: "Tarjeta de crédito",
+      SAVINGS: "Ahorro",
+      INVESTMENT: "Inversión",
+      OTHER: "Otro",
     };
     return types[type] ?? type;
   };

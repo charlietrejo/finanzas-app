@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusCircle, Wallet } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,12 @@ import { createBudget, deleteBudget, listBudgets, listCategories, updateBudget }
 import type { Budget, Category } from "@/types";
 
 const budgetPeriods = ["MONTHLY", "WEEKLY", "YEARLY"] as const;
+
+const budgetPeriodLabels: Record<(typeof budgetPeriods)[number], string> = {
+  MONTHLY: "Mensual",
+  WEEKLY: "Semanal",
+  YEARLY: "Anual",
+};
 
 type BudgetForm = {
   categoryId: string;
@@ -119,20 +125,6 @@ export default function BudgetsPage() {
           <CardTitle>{editingId ? "Editar presupuesto" : "Nuevo presupuesto"}</CardTitle>
           <CardDescription>Establece límites por categoría y periodo.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
-          <Wallet className="h-6 w-6 text-slate-600" />
-          <div className="w-full">
-            <p className="text-sm font-semibold text-slate-900">Crea presupuestos por categoría</p>
-            <p className="text-sm text-slate-500">Controla tus límites de gasto con periodos definidos.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{editingId ? "Editar presupuesto" : "Nuevo presupuesto"}</CardTitle>
-          <CardDescription>Establece límites por categoría y periodo.</CardDescription>
-        </CardHeader>
         <CardContent>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <select
@@ -163,7 +155,7 @@ export default function BudgetsPage() {
               >
                 {budgetPeriods.map((period) => (
                   <option key={period} value={period}>
-                    {period}
+                    {budgetPeriodLabels[period]}
                   </option>
                 ))}
               </select>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusCircle, Target } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,20 +103,6 @@ export default function GoalsPage() {
         <p className="text-sm font-medium text-slate-500">Metas</p>
         <h1 className="text-2xl font-semibold text-slate-900">Ahorro y objetivos financieros</h1>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{editingId ? "Editar meta" : "Nueva meta"}</CardTitle>
-          <CardDescription>Define objetivos y visualiza el avance.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
-          <Target className="h-6 w-6 text-slate-600" />
-          <div className="w-full">
-            <p className="text-sm font-semibold text-slate-900">Registra tus metas de ahorro</p>
-            <p className="text-sm text-slate-500">Visualiza el progreso hacia cada objetivo.</p>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

@@ -111,9 +111,6 @@ export default function SettingsPage() {
             <p className="text-base font-semibold text-slate-900">{user?.email ?? "tu cuenta"}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Button variant="outline" onClick={() => router.push('/dashboard')}>
-              Volver al panel
-            </Button>
             <Button variant="secondary" onClick={handleLogout}>
               Cerrar sesión
             </Button>
