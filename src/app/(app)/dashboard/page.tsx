@@ -1,308 +1,76 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import Icon from "@/components/ui/icon-material";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnimatedMoney } from "@/components/dashboard/animated-money";
 
 import {
-  listAccounts,
-  listTransactions,
-  listDebts,
-  listCategories,
-} from "@/services/finance";
-import type { Account, Transaction, Debt, Category } from "@/types";
+  listAccountsServer,
+  listTransactionsServer,
+  listDebtsServer,
+  listCategoriesServer,
+} from "@/services/finance.server";
+import {
+  formatMoney,
+  monthShort,
+  formatDay,
+  isCurrentMonth,
+  transactionLabel,
+  typeBadgeClass,
+} from "@/lib/format";
+import type { Account, Category, Debt, Transaction } from "@/types";
 
-function monthShort(d: Date) {
-  return d.toLocaleString("es-MX", { month: "short" });
-}
+// QA-37 — Dashboard como Server Component. El fetching y el render inicial
+// ocurren en el servidor con el cliente Supabase server-side (cookies de
+// sesión), por lo que los datos se incluyen en el HTML y son visibles AUNQUE
+// la hidratación de Client Components esté bloqueada por la CSP estricta
+// (script-src 'self'). Única isla client: AnimatedMoney (contador animado con
+// fallback estático). No se modifican Supabase/RLS/RPC ni variables de entorno.
 
-function formatMoney(amount: number) {
-  return amount.toLocaleString("es-MX", {
-    style: "currency",
-    currency: "MXN",
-  });
-}
+const quickActions: {
+  label: string;
+  icon: string;
+  href: string;
+  bg: string;
+  border: string;
+  iconColor: string;
+  shadow: string;
+}[] = [
+  { label: "Ingreso", icon: "add", href: "/transactions?type=INCOME", bg: "bg-emerald-50", border: "border-emerald-200", iconColor: "text-emerald-600", shadow: "shadow-emerald-200/70" },
+  { label: "Gasto", icon: "remove", href: "/transactions?type=EXPENSE", bg: "bg-rose-50", border: "border-rose-200", iconColor: "text-rose-600", shadow: "shadow-rose-200/70" },
+  { label: "Transferencia", icon: "swap_horiz", href: "/transactions?type=TRANSFER", bg: "bg-sky-50", border: "border-sky-200", iconColor: "text-sky-600", shadow: "shadow-sky-200/70" },
+  { label: "Pago tarjeta", icon: "credit_card", href: "/transactions?type=DEBT_PAYMENT", bg: "bg-violet-50", border: "border-violet-200", iconColor: "text-violet-600", shadow: "shadow-violet-200/70" },
+];
 
-function transactionLabel(type: Transaction["type"]) {
-  const labels: Record<Transaction["type"], string> = {
-    INCOME: "Ingreso",
-    EXPENSE: "Gasto",
-    TRANSFER: "Transferencia",
-    DEBT_PAYMENT: "Pago de deuda",
-  };
-  return labels[type];
-}
+export default async function DashboardPage() {
+  // Fuerza dynamic rendering: el dashboard lee la sesión desde cookies vía el
+  // cliente Supabase server-side, por lo que no puede ser estático (QA-37).
+  await connection();
 
-function isCurrentMonth(dateStr: string) {
-  const now = new Date();
-  const [year, month] = dateStr.split("-").map(Number);
-  return year === now.getFullYear() && month === now.getMonth() + 1;
-}
+  let accounts: Account[] = [];
+  let transactions: Transaction[] = [];
+  let debts: Debt[] = [];
+  let categories: Category[] = [];
+  let error: string | null = null;
 
-function formatDay(dateStr: string) {
-  const date = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
-  if (sameDay(date, today)) return "Hoy";
-  if (sameDay(date, yesterday)) return "Ayer";
-  return `${date.getDate()} ${monthShort(date)}`;
-}
-
-function useCountUp(target: number, durationMs = 900) {
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) {
-      queueMicrotask(() => setValue(target));
-      return;
-    }
-
-    let raf = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(target * eased);
-      if (t < 1) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        setValue(target);
-      }
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, durationMs]);
-
-  return value;
-}
-
-export default function DashboardPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const [accountData, transactionData, debtData, categoryData] =
-          await Promise.all([
-            listAccounts(),
-            listTransactions(),
-            listDebts(),
-            listCategories(),
-          ]);
-
-        setAccounts(accountData);
-        setTransactions(transactionData);
-        setDebts(debtData);
-        setCategories(categoryData);
-        setError(null);
-      } catch (err) {
-        // Promise.all rechaza con el primer error, pero oculta qué consulta
-        // falló. Ejecutamos cada una de forma aislada para etiquetar el origen
-        // y revelar el mensaje real de Supabase (no el "{}" del console.error).
-        const probes: Array<[string, () => Promise<unknown>]> = [
-          ["cuentas", listAccounts],
-          ["transacciones", listTransactions],
-          ["deudas", listDebts],
-          ["categorías", listCategories],
-        ];
-        for (const [label, fn] of probes) {
-          try {
-            await fn();
-          } catch (e) {
-            console.error(`[dashboard] Falló la carga de ${label}:`, e);
-            if (!err) err = e;
-          }
-        }
-
-        const message =
-          err && typeof err === "object" && "message" in err
-            ? (err as { message?: string }).message
-            : String(err);
-        console.error("Error cargando datos del dashboard:", err);
-        setError(
-          message
-            ? `No se pudieron cargar tus datos (${message}). Intenta de nuevo.`
-            : "Ocurrió un error inesperado."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboard();
-  }, []);
-
-  // Dinero disponible = cuentas que NO son tarjeta de crédito (la tarjeta
-  // representa deuda, no saldo disponible).
-  const availableMoney = useMemo(
-    () =>
-      accounts
-        .filter((account) => account.type !== "CREDIT_CARD")
-        .reduce((total, account) => total + Number(account.current_balance || 0), 0),
-    [accounts]
-  );
-
-  const animatedAvailable = useCountUp(availableMoney);
-
-  // Totales del mes actual (excluye TRANSFER y DEBT_PAYMENT).
-  const { monthlyIncome, monthlyExpense, monthlyBalance } = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (!isCurrentMonth(t.transaction_date)) continue;
-      if (t.type === "INCOME") income += Number(t.amount);
-      else if (t.type === "EXPENSE") expense += Number(t.amount);
-    }
-    return { monthlyIncome: income, monthlyExpense: expense, monthlyBalance: income - expense };
-  }, [transactions]);
-
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, Category>();
-    for (const c of categories) map.set(c.id, c);
-    return map;
-  }, [categories]);
-
-  // Tarjetas de crédito: cuentas tipo CREDIT_CARD con su deuda asociada.
-  const creditCards = useMemo(() => {
-    const debtMap = new Map<string, Debt>();
-    for (const d of debts) debtMap.set(d.id, d);
-
-    return accounts
-      .filter((account) => account.type === "CREDIT_CARD")
-      .map((account) => {
-        // Deuda enlazada si existe; si no, el saldo de la cuenta es la deuda.
-        const linkedDebt = account.debt_id ? debtMap.get(account.debt_id) : undefined;
-        const current = Number(
-          linkedDebt ? linkedDebt.current_balance : account.current_balance || 0
-        );
-        const limit = Number(
-          linkedDebt ? linkedDebt.initial_amount : account.initial_balance || 0
-        );
-        const available = limit - current;
-        const usedPercent = limit > 0 ? (current / limit) * 100 : 0;
-        return {
-          id: account.id,
-          name: account.name,
-          current,
-          limit,
-          available,
-          usedPercent,
-        };
-      });
-  }, [accounts, debts]);
-
-  const totalUsedCredit = creditCards.reduce((sum, c) => sum + c.current, 0);
-  const totalAvailableCredit = creditCards.reduce((sum, c) => sum + c.available, 0);
-
-  // Resumen de deudas (todas, incluidas tarjetas en deudas sueltas).
-  const totalDebt = debts.reduce((sum, d) => sum + Number(d.current_balance || 0), 0);
-  const upcomingDues = useMemo(() => {
-    return debts
-      .filter((d) => d.due_date)
-      .slice()
-      .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
-      .slice(0, 3)
-      .map((d) => ({
-        id: d.id,
-        name: d.name,
-        dueDate: d.due_date!,
-      }));
-  }, [debts]);
-
-  // Últimos movimientos (top 5).
-  const recentTransactions = useMemo(
-    () =>
-      transactions
-        .slice()
-        .sort((a, b) => (a.transaction_date < b.transaction_date ? 1 : -1))
-        .slice(0, 5),
-    [transactions]
-  );
-
-  const typeBadgeClass: Record<Transaction["type"], string> = {
-    INCOME: "bg-emerald-50 text-emerald-700",
-    EXPENSE: "bg-rose-50 text-rose-700",
-    TRANSFER: "bg-sky-50 text-sky-700",
-    DEBT_PAYMENT: "bg-violet-50 text-violet-700",
-  };
-
-  const quickActions: {
-    label: string;
-    icon: string;
-    href: string;
-    bg: string;
-    border: string;
-    iconColor: string;
-    shadow: string;
-  }[] = [
-    {
-      label: "Ingreso",
-      icon: "add",
-      href: "/transactions?type=INCOME",
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-      iconColor: "text-emerald-600",
-      shadow: "shadow-emerald-200/70",
-    },
-    {
-      label: "Gasto",
-      icon: "remove",
-      href: "/transactions?type=EXPENSE",
-      bg: "bg-rose-50",
-      border: "border-rose-200",
-      iconColor: "text-rose-600",
-      shadow: "shadow-rose-200/70",
-    },
-    {
-      label: "Transferencia",
-      icon: "swap_horiz",
-      href: "/transactions?type=TRANSFER",
-      bg: "bg-sky-50",
-      border: "border-sky-200",
-      iconColor: "text-sky-600",
-      shadow: "shadow-sky-200/70",
-    },
-    {
-      label: "Pago tarjeta",
-      icon: "credit_card",
-      href: "/transactions?type=DEBT_PAYMENT",
-      bg: "bg-violet-50",
-      border: "border-violet-200",
-      iconColor: "text-violet-600",
-      shadow: "shadow-violet-200/70",
-    },
-  ];
-
-  if (loading) {
-    return (
-      <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
-        <div className="h-40 animate-pulse rounded-[32px] bg-slate-200/70" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="h-28 animate-pulse rounded-[24px] bg-slate-200/70" />
-          <div className="h-28 animate-pulse rounded-[24px] bg-slate-200/70" />
-        </div>
-        <div className="h-40 animate-pulse rounded-[24px] bg-slate-200/70" />
-      </div>
-    );
+  try {
+    [accounts, transactions, debts, categories] = await Promise.all([
+      listAccountsServer(),
+      listTransactionsServer(),
+      listDebtsServer(),
+      listCategoriesServer(),
+    ]);
+  } catch (err) {
+    const message =
+      err && typeof err === "object" && "message" in err
+        ? (err as { message?: string }).message
+        : String(err);
+    error = message
+      ? `No se pudieron cargar tus datos (${message}). Intenta de nuevo.`
+      : "Ocurrió un error inesperado.";
   }
 
   if (error) {
@@ -318,13 +86,65 @@ export default function DashboardPage() {
     );
   }
 
+  // Dinero disponible = cuentas que NO son tarjeta de crédito.
+  const availableMoney = accounts
+    .filter((account) => account.type !== "CREDIT_CARD")
+    .reduce((total, account) => total + Number(account.current_balance || 0), 0);
+
+  let monthlyIncome = 0;
+  let monthlyExpense = 0;
+  for (const t of transactions) {
+    if (!isCurrentMonth(t.transaction_date)) continue;
+    if (t.type === "INCOME") monthlyIncome += Number(t.amount);
+    else if (t.type === "EXPENSE") monthlyExpense += Number(t.amount);
+  }
+  const monthlyBalance = monthlyIncome - monthlyExpense;
+
+  const categoryMap = new Map<string, Category>();
+  for (const c of categories) categoryMap.set(c.id, c);
+
+  const debtMap = new Map<string, Debt>();
+  for (const d of debts) debtMap.set(d.id, d);
+
+  const creditCards = accounts
+    .filter((account) => account.type === "CREDIT_CARD")
+    .map((account) => {
+      const linkedDebt = account.debt_id ? debtMap.get(account.debt_id) : undefined;
+      const current = Number(
+        linkedDebt ? linkedDebt.current_balance : account.current_balance || 0,
+      );
+      const limit = Number(
+        linkedDebt ? linkedDebt.initial_amount : account.initial_balance || 0,
+      );
+      const available = limit - current;
+      const usedPercent = limit > 0 ? (current / limit) * 100 : 0;
+      return { id: account.id, name: account.name, current, limit, available, usedPercent };
+    });
+
+  const totalUsedCredit = creditCards.reduce((sum, c) => sum + c.current, 0);
+  const totalAvailableCredit = creditCards.reduce((sum, c) => sum + c.available, 0);
+
+  const totalDebt = debts.reduce((sum, d) => sum + Number(d.current_balance || 0), 0);
+
+  const upcomingDues = debts
+    .filter((d) => d.due_date)
+    .slice()
+    .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
+    .slice(0, 3)
+    .map((d) => ({ id: d.id, name: d.name, dueDate: d.due_date! }));
+
+  const recentTransactions = transactions
+    .slice()
+    .sort((a, b) => (a.transaction_date < b.transaction_date ? 1 : -1))
+    .slice(0, 5);
+
   return (
     <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
-      {/* Bloque principal: dinero disponible */}
+      {/* Bloque principal: dinero disponible (isla animada, fallback estático) */}
       <div className="rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-6 py-7 text-white shadow-lg shadow-indigo-500/20">
         <p className="text-sm opacity-90">Dinero disponible</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-          {formatMoney(animatedAvailable)}
+          <AnimatedMoney target={availableMoney} />
         </h1>
         <p className="mt-2 text-xs opacity-80">
           Saldo de tus cuentas (sin deudas de tarjeta)
@@ -384,9 +204,7 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Tarjetas de crédito</CardTitle>
-          <Badge className="bg-violet-50 text-violet-700">{
-            creditCards.length
-          }</Badge>
+          <Badge className="bg-violet-50 text-violet-700">{creditCards.length}</Badge>
         </CardHeader>
         <CardContent className="space-y-4">
           {creditCards.length === 0 ? (
@@ -394,9 +212,7 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">
-                  {formatMoney(totalUsedCredit)} utilizados
-                </span>
+                <span className="text-slate-500">{formatMoney(totalUsedCredit)} utilizados</span>
                 <span className="font-medium text-slate-700">
                   {formatMoney(totalAvailableCredit)} disponibles
                 </span>
@@ -405,9 +221,7 @@ export default function DashboardPage() {
                 {creditCards.map((card) => (
                   <div key={card.id}>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-800">
-                        {card.name}
-                      </span>
+                      <span className="font-medium text-slate-800">{card.name}</span>
                       <span className="text-slate-500">
                         {formatMoney(card.current)} / {formatMoney(card.limit)}
                       </span>
@@ -458,10 +272,7 @@ export default function DashboardPage() {
                 Próximos vencimientos
               </p>
               {upcomingDues.map((due) => (
-                <div
-                  key={due.id}
-                  className="flex items-center justify-between text-sm"
-                >
+                <div key={due.id} className="flex items-center justify-between text-sm">
                   <span className="text-slate-700">{due.name}</span>
                   <span className="text-slate-500">
                     {new Date(due.dueDate + "T00:00:00").getDate()}{" "}
@@ -498,14 +309,9 @@ export default function DashboardPage() {
               const isPositive = t.type === "INCOME";
               const sign = t.type === "INCOME" ? "+" : "-";
               const label =
-                t.description?.trim() ||
-                category?.name ||
-                transactionLabel(t.type);
+                t.description?.trim() || category?.name || transactionLabel(t.type);
               return (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between py-2"
-                >
+                <div key={t.id} className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
                     <span
                       className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold ${typeBadgeClass[t.type]}`}
@@ -514,9 +320,7 @@ export default function DashboardPage() {
                     </span>
                     <div>
                       <p className="text-sm font-medium text-slate-800">{label}</p>
-                      <p className="text-xs text-slate-400">
-                        {formatDay(t.transaction_date)}
-                      </p>
+                      <p className="text-xs text-slate-400">{formatDay(t.transaction_date)}</p>
                     </div>
                   </div>
                   <p

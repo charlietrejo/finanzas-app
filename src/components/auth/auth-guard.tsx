@@ -1,34 +1,23 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/app-shell";
 
-import { useAuth } from "@/components/auth/auth-provider";
+// QA-37 — AuthGuard como Server Component. Valida la sesión en el servidor
+// (cookies de sesión vía createSupabaseServerClient) y redirige a /login si no
+// hay usuario. Esto evita depender de la hidratación de React (bloqueada por la
+// CSP estricta script-src 'self') para mostrar el contenido protegido: el
+// dashboard ya es Server Component y su HTML se envía aunque no hidrate.
+// El middleware sigue como primera línea de defensa; esto es defensa en profundidad.
+export async function AuthGuard({ children }: { children: React.ReactNode }) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password"];
-
-export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (!loading && !user && !PUBLIC_PATHS.includes(pathname)) {
-      router.replace("/login");
-    }
-  }, [loading, pathname, router, user]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
-        Cargando sesión...
-      </div>
-    );
+  if (!user) {
+    redirect("/login");
   }
 
-  if (!user && !PUBLIC_PATHS.includes(pathname)) {
-    return null;
-  }
-
-  return <>{children}</>;
+  return <AppShell>{children}</AppShell>;
 }

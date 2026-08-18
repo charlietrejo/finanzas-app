@@ -1,6 +1,13 @@
 import Icon from "@/components/ui/icon-material";
+import { connection } from "next/server";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  // Fuerza dynamic rendering en la rama /(auth). El nonce de CSP se inyecta
+  // durante el render SSR (no en build-time), por lo que estas páginas no
+  // pueden ser estáticas: de lo contrario los scripts inline de Next no
+  // reciben el nonce y la CSP los bloquea (hidratación rota).
+  await connection();
+
   return (
     <div className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.10),_transparent_60%)] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">

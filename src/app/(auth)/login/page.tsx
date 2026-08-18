@@ -2,9 +2,14 @@ import Link from "next/link";
 
 import Icon from "@/components/ui/icon-material";
 
-import { AuthForm } from "@/components/auth/auth-form";
+import { AuthForm, LoginFormNative } from "@/components/auth/auth-form";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.10),_transparent_50%)] px-5 pb-10 pt-safe">
       <div className="w-full max-w-sm">
@@ -22,7 +27,7 @@ export default function LoginPage() {
             <p className="mt-1 text-sm text-slate-500">Accede a tu panel financiero</p>
           </div>
 
-          <AuthForm mode="login" />
+          <LoginFormNative serverError={error ?? null} />
 
           <div className="mt-5 flex items-center justify-between text-sm text-slate-500">
             <Link

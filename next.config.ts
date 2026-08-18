@@ -42,6 +42,10 @@ const nextConfig: NextConfig = {
     ].join("; ");
 
     // Headers base de seguridad (se aplican en dev y prod).
+    // CSP estricta: script-src 'self' (sin unsafe-inline/eval). El login se
+    // autentica vía formulario HTML nativo + Route Handler server-side
+    // (QA-36), por lo que no depende de la hidratación de los scripts RSC
+    // inline y la política estricta ya no rompe el flujo de autenticación.
     const securityHeaders: Record<string, string> = {
       "Content-Security-Policy": csp,
       "X-Content-Type-Options": "nosniff",
