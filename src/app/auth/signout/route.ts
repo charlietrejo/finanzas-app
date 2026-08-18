@@ -8,5 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
-  return NextResponse.redirect(new URL("/login", request.url));
+  // Usa request.nextUrl.origin (host público del cliente); en el edge de
+  // Netlify request.url es la URL interna del deploy (QA-39/QA-40).
+  return NextResponse.redirect(new URL("/login", request.nextUrl.origin));
 }

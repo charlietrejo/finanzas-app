@@ -11,7 +11,10 @@ export async function POST(request: NextRequest) {
   const password = String(formData.get("password") ?? "");
 
   const redirectTo = (path: string, message?: string) => {
-    const url = new URL(path, request.url);
+    // Usa request.nextUrl.origin (host público del cliente) en lugar de
+    // request.url: en el edge de Netlify request.url es la URL interna del
+    // deploy, lo que generaba un Location hacia el hostname interno (QA-39).
+    const url = new URL(path, request.nextUrl.origin);
     if (message) url.searchParams.set("error", message);
     return NextResponse.redirect(url, 303);
   };
