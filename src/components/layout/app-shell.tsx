@@ -19,8 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(139,92,246,0.10),_transparent_55%)] text-slate-900">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-40 pb-safe pt-5 pt-safe sm:px-6 lg:flex-row lg:px-8 lg:pb-8">
-        <aside className="hidden w-72 shrink-0 rounded-[32px] border border-slate-200/70 bg-white/85 p-5 shadow-xl shadow-slate-200/40 backdrop-blur md:flex md:flex-col">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:flex-row lg:px-8 lg:py-10">
+        <aside className="hidden w-72 shrink-0 rounded-[32px] border border-slate-200/70 bg-white/85 p-5 shadow-xl shadow-slate-200/40 backdrop-blur lg:flex lg:flex-col">
           <div className="flex items-center gap-3 rounded-3xl border border-slate-200/70 bg-slate-50/90 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-200 text-slate-900">
               <Icon name="account_balance_wallet" className="h-5 w-5" />

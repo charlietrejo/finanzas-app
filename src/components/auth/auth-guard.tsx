@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
 
 // QA-37 — AuthGuard como Server Component. Valida la sesión en el servidor
 // (cookies de sesión vía createSupabaseServerClient) y redirige a /login si no
@@ -9,6 +8,8 @@ import { AppShell } from "@/components/layout/app-shell";
 // CSP estricta script-src 'self') para mostrar el contenido protegido: el
 // dashboard ya es Server Component y su HTML se envía aunque no hidrate.
 // El middleware sigue como primera línea de defensa; esto es defensa en profundidad.
+// NOTA: el AppShell lo provee (app)/layout.tsx, por lo que aquí NO se renderiza
+// otro AppShell (de hacerlo se duplicaría la navegación en desktop).
 export async function AuthGuard({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -19,5 +20,5 @@ export async function AuthGuard({ children }: { children: React.ReactNode }) {
     redirect("/login");
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <>{children}</>;
 }

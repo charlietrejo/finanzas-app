@@ -79,7 +79,9 @@ export default async function DashboardPage() {
         <Card>
           <CardContent className="space-y-4 py-6 text-center">
             <p className="text-sm text-slate-600">{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Link href="/dashboard">
+              <Button>Reintentar</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -139,7 +141,7 @@ export default async function DashboardPage() {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6 p-2 pb-28 sm:p-4 sm:pb-4">
+    <div className="space-y-6 p-2 sm:p-4">
       {/* Bloque principal: dinero disponible (isla animada, fallback estático) */}
       <div className="rounded-[32px] bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-600 px-6 py-7 text-white shadow-lg shadow-indigo-500/20">
         <p className="text-sm opacity-90">Dinero disponible</p>
@@ -237,12 +239,14 @@ export default async function DashboardPage() {
               </div>
             </>
           )}
-          <Link href="/debts" className="block">
-            <Button variant="outline" className="w-full">
-              Ver tarjetas y deudas
-              <Icon name="arrow_right" className="h-4 w-4" />
-            </Button>
-          </Link>
+          <div className="flex justify-center">
+            <Link href="/debts">
+              <Button variant="default" className="w-auto">
+                Ver tarjetas y deudas
+                <Icon name="arrow_right" className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -283,12 +287,14 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          <Link href="/debts" className="block">
-            <Button variant="outline" className="w-full">
-              Administrar deudas
-              <Icon name="arrow_right" className="h-4 w-4" />
-            </Button>
-          </Link>
+          <div className="flex justify-center">
+            <Link href="/debts">
+              <Button variant="default" className="w-auto">
+                Administrar deudas
+                <Icon name="arrow_right" className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -311,20 +317,18 @@ export default async function DashboardPage() {
               const label =
                 t.description?.trim() || category?.name || transactionLabel(t.type);
               return (
-                <div key={t.id} className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded-lg px-2 py-0.5 text-[10px] font-semibold ${typeBadgeClass[t.type]}`}
-                    >
-                      {transactionLabel(t.type)}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{label}</p>
-                      <p className="text-xs text-slate-400">{formatDay(t.transaction_date)}</p>
-                    </div>
+                <div key={t.id} className="grid grid-cols-3 items-center gap-3 py-2">
+                  <span
+                    className={`justify-self-start rounded-lg px-2 py-0.5 text-[10px] font-semibold ${typeBadgeClass[t.type]}`}
+                  >
+                    {transactionLabel(t.type)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-800">{label}</p>
+                    <p className="text-xs text-slate-400">{formatDay(t.transaction_date)}</p>
                   </div>
                   <p
-                    className={`text-sm font-semibold ${
+                    className={`justify-self-end text-right text-sm font-semibold ${
                       isPositive ? "text-emerald-600" : "text-slate-700"
                     }`}
                   >
