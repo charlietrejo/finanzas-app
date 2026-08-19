@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/manifest.webmanifest"];
+const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/manifest.webmanifest"];
 const PROTECTED_PATHS = ["/dashboard", "/transactions", "/analytics", "/budgets", "/goals", "/accounts", "/categories", "/settings"];
 
 // NOTA (QA-31): Se intentó generar un CSP dinámico con nonce reusando el nonce
