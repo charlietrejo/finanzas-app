@@ -9,6 +9,10 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  // QA-42 — "Recuérdame": si está marcado, la sesión persiste 30 días;
+  // si no, cookie de sesión (expira al cerrar el navegador).
+  const remember = formData.get("remember") === "on";
+  const sessionMaxAge = remember ? 30 * 24 * 60 * 60 : undefined;
 
   const redirectTo = (path: string, message?: string) => {
     // Usa request.nextUrl.origin (host público del cliente) en lugar de
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient({ sessionMaxAge });
 
   // Si ya hay sesión, evitamos un signIn innecesario y vamos al panel.
   const {

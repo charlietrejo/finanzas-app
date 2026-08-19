@@ -44,6 +44,16 @@ export function LoginFormNative({ serverError }: { serverError?: string | null }
           />
         </label>
 
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            name="remember"
+            defaultChecked
+            className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+          />
+          Recuérdame
+        </label>
+
         <Button className="w-full" type="submit">
           Entrar
           <ArrowRight className="h-4 w-4" />
