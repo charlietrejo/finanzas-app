@@ -282,16 +282,24 @@ export function DebtsClient({ initialDebts }: { initialDebts: DebtType[] }) {
                   </div>
                 </div>
 
-                <div className="flex w-full justify-center gap-2">
-                  <Button variant="default" size="sm" onClick={() => editDebt(debt)}>
+                <div className="flex w-full items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    aria-label="Editar"
+                    onClick={() => editDebt(debt)}
+                    className="text-slate-500 transition-colors hover:text-slate-700"
+                  >
                     <Pencil className="h-4 w-4" />
-                    Editar
-                  </Button>
+                  </button>
 
-                  <Button variant="default" size="sm" onClick={() => void removeDebt(debt.id)}>
+                  <button
+                    type="button"
+                    aria-label="Eliminar"
+                    onClick={() => void removeDebt(debt.id)}
+                    className="text-rose-500 transition-colors hover:text-rose-600"
+                  >
                     <Trash2 className="h-4 w-4" />
-                    Eliminar
-                  </Button>
+                  </button>
                 </div>
               </div>
             );

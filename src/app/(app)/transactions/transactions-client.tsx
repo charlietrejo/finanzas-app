@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { PlusCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, FilterX, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import Icon from "@/components/ui/icon-material";
 
 import { Button } from "@/components/ui/button";
@@ -539,19 +539,26 @@ export function TransactionsClient({
                   <option value="date">Ordenar: fecha</option>
                   <option value="amount">Ordenar: monto</option>
                 </select>
-                <Button
-                  type="button"
-                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                >
-                  {sortDir === "asc" ? "Asc ↑" : "Desc ↓"}
-                </Button>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    aria-label={sortDir === "asc" ? "Ordenar descendente" : "Ordenar ascendente"}
+                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:text-slate-700"
+                  >
+                    {sortDir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Limpiar filtros"
+                    onClick={resetFilters}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:text-slate-700"
+                  >
+                    <FilterX className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex justify-center">
-              <Button type="button" variant="default" onClick={resetFilters}>
-                Limpiar filtros
-              </Button>
-            </div>
+          </div>
           </div>
 
           {transactions.length === 0 && (
@@ -579,44 +586,59 @@ export function TransactionsClient({
             return (
               <div
                 key={transaction.id}
-                className="grid grid-cols-[5.5rem_1fr] items-start gap-y-2 divide-x divide-slate-100 py-3 first:pt-0 last:pb-0 sm:grid-cols-[6rem_1fr_auto_auto] sm:items-center sm:gap-y-0"
+                className="grid grid-cols-1 gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-3 sm:items-center sm:gap-4"
               >
-                <span className={`mx-auto w-fit truncate rounded-lg px-2 py-0.5 text-center text-[10px] font-semibold ${typeBadgeClass[transaction.type]}`}>
-                  {typeLabel[transaction.type]}
-                </span>
-                <div className="min-w-0 px-3">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-slate-800">{transaction.description}</p>
-                    {debt && (
-                      <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                        {debt.name}
-                      </span>
-                    )}
+                {/* Columna 1: tipo + descripción + fecha */}
+                <div className="flex items-center gap-2 text-left">
+                  <span className={`w-fit shrink-0 truncate rounded-lg px-2 py-0.5 text-center text-[10px] font-semibold ${typeBadgeClass[transaction.type]}`}>
+                    {typeLabel[transaction.type]}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium text-slate-800">{transaction.description}</p>
+                      {debt && (
+                        <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                          {debt.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400">{formatDay(transaction.transaction_date)}</p>
                   </div>
-                  <p className="text-xs text-slate-400">{formatDay(transaction.transaction_date)}</p>
-                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                </div>
+
+                {/* Columna 2: cuenta · categoría */}
+                <div className="text-left text-xs text-slate-500">
+                  <p className="truncate">
                     {account?.name ?? "Cuenta"}
                     {transaction.type === "TRANSFER" && destination ? ` → ${destination.name}` : ""}
-                    {category ? ` · ${category.name}` : ""}
                   </p>
-                  <p className={`mt-1 text-sm font-semibold sm:hidden ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
+                  <p className="truncate">{category ? category.name : "—"}</p>
+                </div>
+
+                {/* Columna 3: monto + acciones */}
+                <div className="flex items-center gap-3 text-left">
+                  <span className={`text-sm font-semibold ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
                     {sign}
                     {formatMoney(Number(transaction.amount))}
-                  </p>
-                </div>
-                <p className={`hidden px-1 text-right text-sm font-semibold sm:block ${isPositive ? "text-emerald-600" : transaction.type === "TRANSFER" ? "text-indigo-600" : "text-slate-700"}`}>
-                  {sign}
-                  {formatMoney(Number(transaction.amount))}
-                </p>
-                <div className="col-span-2 flex justify-end gap-2 sm:col-span-1">
-                  <Button type="button" variant="default" size="sm" onClick={() => handleEdit(transaction)}>
-                    <Icon name="edit" className="h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button type="button" variant="default" size="sm" onClick={() => void handleDelete(transaction.id)}>
-                    <Icon name="delete" className="h-4 w-4" />
-                    Eliminar
-                  </Button>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label="Editar"
+                      onClick={() => handleEdit(transaction)}
+                      className="text-slate-500 transition-colors hover:text-slate-700"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Eliminar"
+                      onClick={() => void handleDelete(transaction.id)}
+                      className="text-rose-500 transition-colors hover:text-rose-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
