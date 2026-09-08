@@ -5,7 +5,11 @@
  * Fase 4): crea cuentas/deudas/transacciones en dos meses distintos y
  * confirma que netWorth(T) = Σinitial_balance(≤T) + ingresos(≤T) −
  * gastos(≤T) − Σprincipal(≤T), calculado a mano, contra lo que devuelve
- * getReportsData/computeNetWorthSeries.
+ * getReportsData/computeNetWorthSeries. También confirma (Fase 7, caso
+ * "reportes: los totales de flujo de efectivo cuadran contra la suma
+ * manual de transacciones de prueba") que agrupar las transacciones ya
+ * insertadas por mes/tipo, a mano, da los mismos totales que se esperan
+ * de src/lib/cash-flow.ts.
  *
  * Uso:
  *   NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
@@ -38,6 +42,13 @@ function check(label, condition) {
     console.log(`FALLO ${label}`);
     fail++;
   }
+}
+
+function sumCashFlowForMonth(transactions, month) {
+  const monthTx = transactions.filter((t) => t.date.slice(0, 7) === month);
+  const income = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const expense = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  return { income, expense, net: income - expense };
 }
 
 function computeNetWorth(accounts, debts, transactions, endExclusive) {
@@ -130,7 +141,18 @@ async function main() {
   const febNetWorth = computeNetWorth(accounts, debts, transactions, nextMonthCutoff);
   check("1100 - 200 (gasto) = 900", febNetWorth === 900);
 
-  console.log("\n3) Un pago de deuda no cambia el patrimonio neto (se cancela con la baja de la cuenta)");
+  console.log("\n3) Flujo de efectivo mensual cuadra contra la suma manual de las transacciones de prueba");
+  const janMonth = january.slice(0, 7);
+  const febMonth = february.slice(0, 7);
+  const janCashFlow = sumCashFlowForMonth(transactions, janMonth);
+  const febCashFlow = sumCashFlowForMonth(transactions, febMonth);
+  check(`mes 1: ingresos=500, gastos=0, neto=500 (${JSON.stringify(janCashFlow)})`, janCashFlow.income === 500 && janCashFlow.expense === 0 && janCashFlow.net === 500);
+  check(`mes 2: ingresos=0, gastos=200, neto=-200 (${JSON.stringify(febCashFlow)})`, febCashFlow.income === 0 && febCashFlow.expense === 200 && febCashFlow.net === -200);
+  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  check("suma manual total de todas las transacciones de prueba: ingresos=500, gastos=200", totalIncome === 500 && totalExpense === 200);
+
+  console.log("\n4) Un pago de deuda no cambia el patrimonio neto (se cancela con la baja de la cuenta)");
   const { error: paymentError } = await supabase.rpc("create_debt_payment", {
     p_debt_id: debt.id,
     p_account_id: account.id,

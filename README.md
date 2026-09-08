@@ -30,11 +30,19 @@ npm run dev
 
 ### Pruebas
 
+Ver `TESTING.md` para la cobertura completa (mapeada contra los casos de prueba del doc de requerimientos) y la checklist manual.
+
 ```bash
 npm run test
 ```
 
-Para verificar las reglas de negocio (saldo negativo, límite de crédito, atomicidad de transferencias) contra tu proyecto real, crea un usuario de prueba y corre:
+Para correr toda la suite de integración contra Supabase real de una sola vez (crea y limpia usuarios de prueba automáticamente):
+
+```bash
+npm run verify:all
+```
+
+También se puede correr cada verificación por separado. Para las reglas de negocio (saldo negativo, límite de crédito, atomicidad de transferencias), crea un usuario de prueba y corre:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
@@ -109,4 +117,6 @@ Fase 5 completa: PWA instalable (manifest, ícono de marca propio en varios tama
 
 Fase 6 completa: auditoría de seguridad. Se revisaron las 12 migraciones, las 3 funciones RPC, el middleware y las Server Actions de auth. Atomización de operaciones multi-tabla: completa, sin huecos (transacciones, pagos de deuda y aportaciones a metas ya usaban RPC atómica desde Fases 1 y 3). Sesión/tokens: correcto, sigue el patrón oficial de `@supabase/ssr`, sin service role key en el código, mensajes de login/recuperación genéricos (no revelan si un correo existe). **Hallazgo real y corregido** (`013_rls_ownership_hardening.sql`): las políticas RLS de `insert`/`update` verificaban `user_id = auth.uid()` pero nunca que las columnas que referencian otra tabla (`account_id`, `category_id`, `debt_id`, `goal_id`, `parent_id`) pertenecieran también al mismo usuario — permitía, vía la API REST directa (sin pasar por la app), insertar filas propias apuntando a IDs de otro usuario. Corregido y verificado con `scripts/verify-cross-user-isolation.mjs` (16/16 pruebas), sin romper ningún flujo existente (43/43 pruebas de los scripts de fases anteriores siguen pasando).
 
-Próxima fase (ver el documento de requerimientos): pruebas formales (Fase 7). El despliegue a Vercel/Cloudflare Pages tampoco se ha hecho todavía — es necesario para probar "Agregar a pantalla de inicio" en un iPhone real.
+Fase 7 completa: pruebas. De los 7 casos de prueba listados en el doc, 6 ya tenían cobertura automatizada repartida en los scripts de fases anteriores; se cerró el único hueco real (flujo de efectivo mensual vs. suma manual, agregado a `verify-reports-data.mjs`) y se consolidó todo en un solo comando: `npm run verify:all` crea usuarios de prueba temporales, corre los 6 scripts de integración (62 aserciones en total) y limpia todo al terminar — verificado de punta a punta contra el Supabase real del usuario. Ver `TESTING.md` para el mapeo completo caso-por-caso y la checklist de pruebas manuales (instalación en iPhone real, export CSV/PDF, apariencia en pantallas chicas) que el doc también pide y no se prestan a automatización.
+
+Con esto se completan las 7 fases del documento de requerimientos. Pendiente, sin ser parte de ninguna fase explícita: desplegar a Vercel/Cloudflare Pages — necesario para probar "Agregar a pantalla de inicio" en un iPhone real.

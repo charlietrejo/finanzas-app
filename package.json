@@ -7,7 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:transactions": "node --env-file=.env.local scripts/verify-transaction-rpc.mjs",
+    "verify:budgets": "node --env-file=.env.local scripts/verify-budgets.mjs",
+    "verify:debts": "node --env-file=.env.local scripts/verify-debt-payment-rpc.mjs",
+    "verify:goals": "node --env-file=.env.local scripts/verify-goal-contribution-rpc.mjs",
+    "verify:reports": "node --env-file=.env.local scripts/verify-reports-data.mjs",
+    "verify:isolation": "node --env-file=.env.local scripts/verify-cross-user-isolation.mjs",
+    "verify:all": "node --env-file=.env.local scripts/verify-all.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
