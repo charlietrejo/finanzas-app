@@ -1,6 +1,6 @@
 # Northstar Finance
 
-App de finanzas personales mobile-first en MXN. Fases 1-4: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
+App de finanzas personales mobile-first en MXN, instalable como PWA. Fases 1-5: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes + PWA/offline. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
 
 ## Stack
 
@@ -67,6 +67,23 @@ TEST_USER_EMAIL=... TEST_USER_PASSWORD=... \
 node scripts/verify-reports-data.mjs
 ```
 
+### PWA (íconos, manifest, service worker)
+
+Los íconos se generan con PowerShell + `System.Drawing` (Windows only, sin dependencias npm):
+
+```powershell
+pwsh ./scripts/generate-icons.ps1
+```
+
+El service worker (`public/sw.js`) solo se activa en producción (`NODE_ENV=production`), nunca en `npm run dev`, para no interferir con el hot-reload. Para probarlo localmente:
+
+```bash
+npm run build
+npm run start
+```
+
+Y luego, con el navegador apuntando a `http://localhost:3000`, verificar en DevTools → Application → Service Workers que está activo, y que `/manifest.webmanifest` responde JSON válido. "Agregar a pantalla de inicio" en iPhone requiere HTTPS real (no funciona sobre `http://localhost`), así que la prueba final en un iPhone físico solo se puede hacer una vez desplegada la app (Vercel/Cloudflare Pages).
+
 ## Estado
 
 Fase 1 completa: registro/login/recuperación de contraseña, CRUD de cuentas (con catálogo de bancos MX) y CRUD de transacciones (ingreso/gasto/transferencia, con catálogo de comercios MX, categorías, etiquetas y flag de recurrente), todo con la regla de "no saldo negativo" aplicada en la base de datos vía funciones RPC atómicas.
@@ -77,4 +94,6 @@ Fase 3 completa: CRUD de deudas (tarjeta/préstamo/persona) con registro de pago
 
 Fase 4 completa: reportes con flujo de efectivo mensual (ingresos vs. gastos), distribución de gastos por categoría, tendencia de patrimonio neto histórico con proyección a 6 meses, selector de rango (6/12/24 meses), vista de tabla y exportación a CSV/PDF (impresión del navegador). Paleta de gráficas validada contra accesibilidad CVD con la skill dataviz.
 
-Próximas fases (ver el documento de requerimientos): PWA/offline, auditoría de seguridad.
+Fase 5 completa: PWA instalable (manifest, ícono de marca propio en varios tamaños, modo standalone), service worker con cache de assets estáticos y de la última página cargada (con fallback a una pantalla "sin conexión" cuando no hay red ni caché previo — verificado apagando el servidor y recargando en el navegador), aviso de instalación para iOS Safari, y ajustes mobile-first (safe-area insets para el notch/home indicator del iPhone).
+
+Próximas fases (ver el documento de requerimientos): auditoría de seguridad (Fase 6), pruebas formales (Fase 7). El despliegue a Vercel/Cloudflare Pages tampoco se ha hecho todavía — es necesario para probar "Agregar a pantalla de inicio" en un iPhone real.

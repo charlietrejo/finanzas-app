@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(auth)/actions";
 import { NavLinks } from "@/components/navigation/nav-links";
+import { IosInstallHint } from "@/components/pwa/ios-install-hint";
 import { LogOut } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -34,8 +35,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col pb-20 md:pb-0">
-        <header className="flex items-center justify-between border-b border-pebble bg-snow px-4 py-4 md:hidden print:hidden">
+      <div className="flex flex-1 flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+        <header
+          className="flex items-center justify-between border-b border-pebble bg-snow px-4 py-4 md:hidden print:hidden"
+          style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        >
           <p className="text-lg font-light text-ink">Northstar Finance</p>
           <form action={signOut}>
             <button type="submit" aria-label="Cerrar sesión" className="text-slate">
@@ -44,10 +48,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
         </header>
 
+        <IosInstallHint />
+
         <main className="flex-1 px-4 py-6 md:px-10 md:py-10">{children}</main>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden print:hidden">
+      <div
+        className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden print:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <NavLinks orientation="horizontal" />
       </div>
     </div>
