@@ -1,6 +1,6 @@
 # Northstar Finance
 
-App de finanzas personales mobile-first en MXN, instalable como PWA. Fases 1-5: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes + PWA/offline. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
+App de finanzas personales mobile-first en MXN, instalable como PWA. Fases 1-6: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes + PWA/offline + auditoría de seguridad. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
 
 ## Stack
 
@@ -20,7 +20,7 @@ Completa `.env.local` con la URL y anon key de tu proyecto Supabase (Project Set
 
 ### Migraciones
 
-Corre los archivos de `supabase/migrations/` en orden (001 → 012) contra tu proyecto, ya sea con el SQL Editor del dashboard de Supabase o con la CLI de Supabase (`supabase db push`).
+Corre los archivos de `supabase/migrations/` en orden (001 → 013) contra tu proyecto, ya sea con el SQL Editor del dashboard de Supabase o con la CLI de Supabase (`supabase db push`).
 
 ### Desarrollo
 
@@ -84,6 +84,17 @@ npm run start
 
 Y luego, con el navegador apuntando a `http://localhost:3000`, verificar en DevTools → Application → Service Workers que está activo, y que `/manifest.webmanifest` responde JSON válido. "Agregar a pantalla de inicio" en iPhone requiere HTTPS real (no funciona sobre `http://localhost`), así que la prueba final en un iPhone físico solo se puede hacer una vez desplegada la app (Vercel/Cloudflare Pages).
 
+### Auditoría de seguridad (aislamiento entre usuarios)
+
+Con dos usuarios de prueba ya confirmados, verifica que ninguno pueda leer, insertar-referenciando, actualizar ni borrar datos del otro:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
+USER_A_EMAIL=... USER_A_PASSWORD=... \
+USER_B_EMAIL=... USER_B_PASSWORD=... \
+node scripts/verify-cross-user-isolation.mjs
+```
+
 ## Estado
 
 Fase 1 completa: registro/login/recuperación de contraseña, CRUD de cuentas (con catálogo de bancos MX) y CRUD de transacciones (ingreso/gasto/transferencia, con catálogo de comercios MX, categorías, etiquetas y flag de recurrente), todo con la regla de "no saldo negativo" aplicada en la base de datos vía funciones RPC atómicas.
@@ -96,4 +107,6 @@ Fase 4 completa: reportes con flujo de efectivo mensual (ingresos vs. gastos), d
 
 Fase 5 completa: PWA instalable (manifest, ícono de marca propio en varios tamaños, modo standalone), service worker con cache de assets estáticos y de la última página cargada (con fallback a una pantalla "sin conexión" cuando no hay red ni caché previo — verificado apagando el servidor y recargando en el navegador), aviso de instalación para iOS Safari, y ajustes mobile-first (safe-area insets para el notch/home indicator del iPhone).
 
-Próximas fases (ver el documento de requerimientos): auditoría de seguridad (Fase 6), pruebas formales (Fase 7). El despliegue a Vercel/Cloudflare Pages tampoco se ha hecho todavía — es necesario para probar "Agregar a pantalla de inicio" en un iPhone real.
+Fase 6 completa: auditoría de seguridad. Se revisaron las 12 migraciones, las 3 funciones RPC, el middleware y las Server Actions de auth. Atomización de operaciones multi-tabla: completa, sin huecos (transacciones, pagos de deuda y aportaciones a metas ya usaban RPC atómica desde Fases 1 y 3). Sesión/tokens: correcto, sigue el patrón oficial de `@supabase/ssr`, sin service role key en el código, mensajes de login/recuperación genéricos (no revelan si un correo existe). **Hallazgo real y corregido** (`013_rls_ownership_hardening.sql`): las políticas RLS de `insert`/`update` verificaban `user_id = auth.uid()` pero nunca que las columnas que referencian otra tabla (`account_id`, `category_id`, `debt_id`, `goal_id`, `parent_id`) pertenecieran también al mismo usuario — permitía, vía la API REST directa (sin pasar por la app), insertar filas propias apuntando a IDs de otro usuario. Corregido y verificado con `scripts/verify-cross-user-isolation.mjs` (16/16 pruebas), sin romper ningún flujo existente (43/43 pruebas de los scripts de fases anteriores siguen pasando).
+
+Próxima fase (ver el documento de requerimientos): pruebas formales (Fase 7). El despliegue a Vercel/Cloudflare Pages tampoco se ha hecho todavía — es necesario para probar "Agregar a pantalla de inicio" en un iPhone real.
