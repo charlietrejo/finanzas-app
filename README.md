@@ -1,11 +1,12 @@
 # Northstar Finance
 
-App de finanzas personales mobile-first en MXN. Fases 1-3: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
+App de finanzas personales mobile-first en MXN. Fases 1-4: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
 
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind CSS v4
 - Supabase (Postgres, Auth, RLS)
+- Recharts (gráficas, paleta validada con la skill dataviz — ver `src/lib/constants/chart-colors.ts`)
 - Vitest + Testing Library
 
 ## Setup
@@ -58,6 +59,14 @@ node scripts/verify-debt-payment-rpc.mjs
 node scripts/verify-goal-contribution-rpc.mjs
 ```
 
+Para verificar la fórmula de patrimonio neto histórico usada en Reportes:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
+TEST_USER_EMAIL=... TEST_USER_PASSWORD=... \
+node scripts/verify-reports-data.mjs
+```
+
 ## Estado
 
 Fase 1 completa: registro/login/recuperación de contraseña, CRUD de cuentas (con catálogo de bancos MX) y CRUD de transacciones (ingreso/gasto/transferencia, con catálogo de comercios MX, categorías, etiquetas y flag de recurrente), todo con la regla de "no saldo negativo" aplicada en la base de datos vía funciones RPC atómicas.
@@ -66,4 +75,6 @@ Fase 2 completa: presupuesto mensual por categoría con navegación de mes, comp
 
 Fase 3 completa: CRUD de deudas (tarjeta/préstamo/persona) con registro de pagos atómico (RPC, descuenta cuenta y deuda a la vez), simulador de amortización, sugerencia visual de estrategia bola de nieve/avalancha; CRUD de metas de ahorro con aportaciones atómicas (RPC), barra de progreso y proyección de cumplimiento según ritmo actual.
 
-Próximas fases (ver el documento de requerimientos): Reportes/proyecciones, PWA/offline, auditoría de seguridad.
+Fase 4 completa: reportes con flujo de efectivo mensual (ingresos vs. gastos), distribución de gastos por categoría, tendencia de patrimonio neto histórico con proyección a 6 meses, selector de rango (6/12/24 meses), vista de tabla y exportación a CSV/PDF (impresión del navegador). Paleta de gráficas validada contra accesibilidad CVD con la skill dataviz.
+
+Próximas fases (ver el documento de requerimientos): PWA/offline, auditoría de seguridad.

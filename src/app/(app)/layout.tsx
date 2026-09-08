@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-cloud md:flex-row">
-      <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-pebble bg-snow p-6 md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-pebble bg-snow p-6 md:flex print:hidden">
         <div>
           <p className="mb-8 text-xl font-light text-ink">Northstar Finance</p>
           <NavLinks orientation="vertical" />
@@ -35,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex flex-1 flex-col pb-20 md:pb-0">
-        <header className="flex items-center justify-between border-b border-pebble bg-snow px-4 py-4 md:hidden">
+        <header className="flex items-center justify-between border-b border-pebble bg-snow px-4 py-4 md:hidden print:hidden">
           <p className="text-lg font-light text-ink">Northstar Finance</p>
           <form action={signOut}>
             <button type="submit" aria-label="Cerrar sesión" className="text-slate">
@@ -47,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="flex-1 px-4 py-6 md:px-10 md:py-10">{children}</main>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden">
+      <div className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden print:hidden">
         <NavLinks orientation="horizontal" />
       </div>
     </div>

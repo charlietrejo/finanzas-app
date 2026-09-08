@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank, CreditCard, Target } from "lucide-react";
+import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank, CreditCard, Target, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/budgets", label: "Presupuestos", icon: PiggyBank },
   { href: "/debts", label: "Deudas", icon: CreditCard },
   { href: "/goals", label: "Metas", icon: Target },
+  { href: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 
 export function NavLinks({ orientation }: { orientation: "horizontal" | "vertical" }) {
