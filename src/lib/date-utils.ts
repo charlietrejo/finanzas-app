@@ -24,3 +24,9 @@ export function formatMonthLabel(month: string): string {
   const label = MONTH_LABEL_FORMATTER.format(new Date(`${month}-01T00:00:00`));
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
+
+export function daysBetween(a: string | Date, b: string | Date): number {
+  const dateA = typeof a === "string" ? new Date(a) : a;
+  const dateB = typeof b === "string" ? new Date(b) : b;
+  return Math.floor((dateB.getTime() - dateA.getTime()) / 86_400_000);
+}

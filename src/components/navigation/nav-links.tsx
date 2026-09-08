@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank } from "lucide-react";
+import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank, CreditCard, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { href: "/accounts", label: "Cuentas", icon: Wallet },
   { href: "/transactions", label: "Movimientos", icon: ArrowLeftRight },
   { href: "/budgets", label: "Presupuestos", icon: PiggyBank },
+  { href: "/debts", label: "Deudas", icon: CreditCard },
+  { href: "/goals", label: "Metas", icon: Target },
 ];
 
 export function NavLinks({ orientation }: { orientation: "horizontal" | "vertical" }) {
@@ -19,7 +21,7 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
     <nav
       className={cn(
         orientation === "horizontal"
-          ? "flex items-center justify-around"
+          ? "flex items-center overflow-x-auto"
           : "flex flex-col gap-1"
       )}
     >
@@ -31,7 +33,7 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
             href={href}
             className={cn(
               orientation === "horizontal"
-                ? "flex flex-1 flex-col items-center gap-1 py-2 text-xs"
+                ? "flex min-w-[68px] shrink-0 flex-col items-center gap-1 py-2 text-xs"
                 : "flex items-center gap-3 rounded-badge px-4 py-2.5 text-sm",
               active
                 ? orientation === "horizontal"

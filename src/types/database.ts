@@ -1,6 +1,7 @@
 export type AccountType = "cash" | "debit" | "credit" | "investment" | "savings";
 export type CategoryType = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
+export type DebtType = "credit_card" | "loan" | "person";
 
 // Nota: se usan `type` (no `interface`) porque los Row de la tabla deben ser
 // estructuralmente asignables a Record<string, unknown> para satisfacer
@@ -48,6 +49,52 @@ export type Budget = {
   month: string;
   amount_limit: number;
   alert_threshold_pct: number;
+  created_at: string;
+};
+
+export type Debt = {
+  id: string;
+  user_id: string;
+  name: string;
+  type: DebtType;
+  principal: number;
+  interest_rate: number;
+  minimum_payment: number;
+  due_day: number | null;
+  current_balance: number;
+  created_at: string;
+};
+
+export type DebtPayment = {
+  id: string;
+  user_id: string;
+  debt_id: string;
+  account_id: string;
+  amount: number;
+  date: string;
+  note: string | null;
+  created_at: string;
+};
+
+export type Goal = {
+  id: string;
+  user_id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string;
+  account_id: string | null;
+  created_at: string;
+};
+
+export type GoalContribution = {
+  id: string;
+  user_id: string;
+  goal_id: string;
+  account_id: string;
+  amount: number;
+  date: string;
+  note: string | null;
   created_at: string;
 };
 
@@ -126,6 +173,52 @@ export interface Database {
         Update: Partial<Omit<Budget, "id" | "user_id">>;
         Relationships: [];
       };
+      debts: {
+        Row: Debt;
+        Insert: Omit<Debt, "id" | "user_id" | "created_at" | "current_balance" | "due_day"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          current_balance?: number;
+          due_day?: number | null;
+        };
+        Update: Partial<Omit<Debt, "id" | "user_id">>;
+        Relationships: [];
+      };
+      debt_payments: {
+        Row: DebtPayment;
+        Insert: Omit<DebtPayment, "id" | "user_id" | "created_at" | "note"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          note?: string | null;
+        };
+        Update: Partial<Omit<DebtPayment, "id" | "user_id">>;
+        Relationships: [];
+      };
+      goals: {
+        Row: Goal;
+        Insert: Omit<Goal, "id" | "user_id" | "created_at" | "current_amount" | "account_id"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          current_amount?: number;
+          account_id?: string | null;
+        };
+        Update: Partial<Omit<Goal, "id" | "user_id">>;
+        Relationships: [];
+      };
+      goal_contributions: {
+        Row: GoalContribution;
+        Insert: Omit<GoalContribution, "id" | "user_id" | "created_at" | "note"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          note?: string | null;
+        };
+        Update: Partial<Omit<GoalContribution, "id" | "user_id">>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Enums: Record<string, never>;
@@ -165,6 +258,34 @@ export interface Database {
         Returns: Transaction;
       };
       delete_transaction: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      create_debt_payment: {
+        Args: {
+          p_debt_id: string;
+          p_account_id: string;
+          p_amount: number;
+          p_date: string;
+          p_note?: string | null;
+        };
+        Returns: DebtPayment;
+      };
+      delete_debt_payment: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      create_goal_contribution: {
+        Args: {
+          p_goal_id: string;
+          p_account_id: string;
+          p_amount: number;
+          p_date: string;
+          p_note?: string | null;
+        };
+        Returns: GoalContribution;
+      };
+      delete_goal_contribution: {
         Args: { p_id: string };
         Returns: void;
       };

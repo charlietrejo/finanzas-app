@@ -6,20 +6,24 @@ import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
 import { getCurrentMonth } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
-import type { Account, Budget } from "@/types/database";
+import type { Account, Budget, Debt } from "@/types/database";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const month = getCurrentMonth();
 
-  const [{ data: accounts }, { data: budgets }, spentByCategory] = await Promise.all([
+  const [{ data: accounts }, { data: budgets }, { data: debts }, spentByCategory] = await Promise.all([
     supabase.from("accounts").select("*").order("created_at", { ascending: true }),
     supabase.from("budgets").select("*").eq("month", `${month}-01`),
+    supabase.from("debts").select("*"),
     getExpenseTotalsByCategory(supabase, month),
   ]);
 
   const list = (accounts ?? []) as Account[];
   const totalBalance = list.reduce((sum, a) => sum + a.current_balance, 0);
+
+  const debtList = (debts ?? []) as Debt[];
+  const totalDebt = debtList.reduce((sum, d) => sum + d.current_balance, 0);
 
   const budgetList = (budgets ?? []) as Budget[];
   const overOrWarningCount = budgetList.filter((b) => {
@@ -48,6 +52,16 @@ export default async function DashboardPage() {
             </p>
             <Link href="/budgets" className="mt-2 inline-block text-sm font-medium text-monday-violet">
               Ver presupuestos
+            </Link>
+          </Card>
+        )}
+
+        {debtList.length > 0 && (
+          <Card tone="lavender" className="w-full max-w-sm">
+            <p className="text-sm font-medium text-slate">Deudas totales</p>
+            <p className="mt-2 text-3xl font-light text-ink">{formatMXN(totalDebt)}</p>
+            <Link href="/debts" className="mt-2 inline-block text-sm font-medium text-monday-violet">
+              Ver deudas
             </Link>
           </Card>
         )}
