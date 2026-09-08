@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/accounts", label: "Cuentas", icon: Wallet },
   { href: "/transactions", label: "Movimientos", icon: ArrowLeftRight },
+  { href: "/budgets", label: "Presupuestos", icon: PiggyBank },
 ];
 
 export function NavLinks({ orientation }: { orientation: "horizontal" | "vertical" }) {

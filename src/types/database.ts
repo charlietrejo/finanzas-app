@@ -41,6 +41,16 @@ export type Merchant = {
   created_at: string;
 };
 
+export type Budget = {
+  id: string;
+  user_id: string;
+  category_id: string;
+  month: string;
+  amount_limit: number;
+  alert_threshold_pct: number;
+  created_at: string;
+};
+
 export type Transaction = {
   id: string;
   user_id: string;
@@ -103,6 +113,17 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<Transaction, "id" | "user_id">>;
+        Relationships: [];
+      };
+      budgets: {
+        Row: Budget;
+        Insert: Omit<Budget, "id" | "user_id" | "created_at" | "alert_threshold_pct"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          alert_threshold_pct?: number;
+        };
+        Update: Partial<Omit<Budget, "id" | "user_id">>;
         Relationships: [];
       };
     };
