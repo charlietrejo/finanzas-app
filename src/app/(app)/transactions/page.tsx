@@ -1,0 +1,49 @@
+import { createClient } from "@/lib/supabase/server";
+import { TransactionsClient } from "./transactions-client";
+import type { Account, Category, Merchant } from "@/types/database";
+
+export interface TransactionRow {
+  id: string;
+  account_id: string;
+  to_account_id: string | null;
+  category_id: string | null;
+  merchant_id: string | null;
+  type: "income" | "expense" | "transfer";
+  amount: number;
+  date: string;
+  note: string | null;
+  tags: string[];
+  is_recurring: boolean;
+  account: { name: string } | null;
+  to_account: { name: string } | null;
+  category: { name: string } | null;
+  merchant: { name: string } | null;
+}
+
+export default async function TransactionsPage() {
+  const supabase = await createClient();
+
+  const [{ data: transactions }, { data: accounts }, { data: categories }, { data: merchants }] =
+    await Promise.all([
+      supabase
+        .from("transactions")
+        .select(
+          "id, account_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, account:accounts!transactions_account_id_fkey(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
+        )
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabase.from("accounts").select("*").order("created_at", { ascending: true }),
+      supabase.from("categories").select("*").order("name", { ascending: true }),
+      supabase.from("merchants").select("*").order("name", { ascending: true }),
+    ]);
+
+  return (
+    <TransactionsClient
+      transactions={(transactions ?? []) as unknown as TransactionRow[]}
+      accounts={(accounts ?? []) as Account[]}
+      categories={(categories ?? []) as Category[]}
+      merchants={(merchants ?? []) as Merchant[]}
+    />
+  );
+}

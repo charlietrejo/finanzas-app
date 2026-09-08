@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand & accent */
+  --color-monday-violet: #6161ff;
+  --color-ink: #333333;
+  --color-slate: #535768;
+  --color-cloud: #f5f6f8;
+  --color-snow: #ffffff;
+
+  /* Pastels (surfaces only, never text/borders/buttons) */
+  --color-mint: #bcfe90;
+  --color-sky: #abf0ff;
+  --color-apricot: #ff8940;
+  --color-lavender: #eddff7;
+  --color-periwinkle: #e7ecff;
+  --color-cornflower: #93beff;
+
+  /* Neutrals */
+  --color-mist: #d0d4e4;
+  --color-pebble: #dddfeb;
+  --color-fog: #cacbcd;
+
+  /* Typography */
+  --font-sans: var(--font-poppins), var(--font-manrope), "DM Sans", sans-serif;
+
+  /* Radii */
+  --radius-badge: 6px;
+  --radius-image: 12px;
+  --radius-card: 24px;
+  --radius-pill: 160px;
+
+  /* Shadow */
+  --shadow-card: rgba(205, 208, 223, 0.4) 0px 2px 48px 0px;
+}
+
+body {
+  background: var(--color-cloud);
+  color: var(--color-ink);
+}
