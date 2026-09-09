@@ -1,4 +1,4 @@
-# Pruebas — Northstar Finance
+# Pruebas — Finanzas
 
 Cobertura de pruebas del proyecto, mapeada contra los casos de prueba pedidos en la sección "Fase 7" del documento de requerimientos (`requerimientos-app-financiera.md`).
 

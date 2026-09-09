@@ -1,4 +1,4 @@
-# Northstar Finance
+# Finanzas
 
 App de finanzas personales mobile-first en MXN, instalable como PWA. Fases 1-6: Next.js + Supabase Auth + Cuentas + Transacciones + Presupuestos + Deudas + Metas de ahorro + Reportes + PWA/offline + auditoría de seguridad. Ver `requerimientos-app-financiera.md` para el alcance completo del proyecto.
 
@@ -20,7 +20,7 @@ Completa `.env.local` con la URL y anon key de tu proyecto Supabase (Project Set
 
 ### Migraciones
 
-Corre los archivos de `supabase/migrations/` en orden (001 → 013) contra tu proyecto, ya sea con el SQL Editor del dashboard de Supabase o con la CLI de Supabase (`supabase db push`).
+Corre los archivos de `supabase/migrations/` en orden (001 → 014) contra tu proyecto, ya sea con el SQL Editor del dashboard de Supabase o con la CLI de Supabase (`supabase db push`).
 
 ### Desarrollo
 
@@ -119,4 +119,6 @@ Fase 6 completa: auditoría de seguridad. Se revisaron las 12 migraciones, las 3
 
 Fase 7 completa: pruebas. De los 7 casos de prueba listados en el doc, 6 ya tenían cobertura automatizada repartida en los scripts de fases anteriores; se cerró el único hueco real (flujo de efectivo mensual vs. suma manual, agregado a `verify-reports-data.mjs`) y se consolidó todo en un solo comando: `npm run verify:all` crea usuarios de prueba temporales, corre los 6 scripts de integración (62 aserciones en total) y limpia todo al terminar — verificado de punta a punta contra el Supabase real del usuario. Ver `TESTING.md` para el mapeo completo caso-por-caso y la checklist de pruebas manuales (instalación en iPhone real, export CSV/PDF, apariencia en pantallas chicas) que el doc también pide y no se prestan a automatización.
 
-Con esto se completan las 7 fases del documento de requerimientos. Pendiente, sin ser parte de ninguna fase explícita: desplegar a Vercel/Cloudflare Pages — necesario para probar "Agregar a pantalla de inicio" en un iPhone real.
+Con esto se completan las 7 fases del documento de requerimientos. Desplegado en Vercel (`mi-finc.vercel.app`); manifest, íconos y service worker verificados en producción.
+
+**Auditoría de rendimiento** (post-fases, sin ser parte del doc): se revisó separación client/server components (sin componentes de cliente innecesarios), patrones de queries (sin N+1, todo con `Promise.all`), índices, bundle size, loading states, caché de Next.js, y config de PWA. Dos hallazgos de alta prioridad corregidos en `014_performance_audit_fixes.sql`: (1) índice compuesto `transactions (user_id, type, date)` para la query de gasto-por-categoría-y-mes usada en Dashboard/Presupuestos/Reportes; (2) el catálogo de `merchants` (compartido, ~26 filas, no cambia) se cachea 1h con `unstable_cache` (`src/lib/merchants-data.ts`) en vez de reconsultarse completo en cada carga de `/transactions` — la política RLS se amplió a `anon, authenticated` porque no tiene datos de usuario. Hallazgo medio pendiente: no hay `loading.tsx`/`Suspense` en ninguna ruta (pantalla en blanco mientras cargan los Server Components).

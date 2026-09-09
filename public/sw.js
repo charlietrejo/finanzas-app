@@ -1,4 +1,4 @@
-// Service worker de Northstar Finance: cache básico de assets + última
+// Service worker de Finanzas: cache básico de assets + última
 // página cargada (sección 5 del doc de requerimientos — "cache de assets y
 // última data cargada; sincronización al recuperar conexión, no en tiempo
 // real"). No intercepta Server Actions (POST) ni peticiones a Supabase

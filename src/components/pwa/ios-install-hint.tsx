@@ -37,7 +37,7 @@ export function IosInstallHint() {
     <div className="mx-4 mt-4 flex items-center gap-3 rounded-card bg-periwinkle px-4 py-3 text-sm text-ink md:mx-10">
       <Share size={18} className="shrink-0 text-monday-violet" />
       <p className="flex-1">
-        Instala Northstar Finance: toca <strong>Compartir</strong> y luego{" "}
+        Instala Finanzas: toca <strong>Compartir</strong> y luego{" "}
         <strong>Agregar a pantalla de inicio</strong>.
       </p>
       <button aria-label="Cerrar aviso" onClick={dismiss} className="shrink-0 text-slate">

@@ -15,7 +15,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Northstar Finance",
+  title: "Finanzas",
   description: "Finanzas personales en MXN, mobile-first.",
   appleWebApp: {
     capable: true,

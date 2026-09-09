@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMerchants } from "@/lib/merchants-data";
 import { TransactionsClient } from "./transactions-client";
-import type { Account, Category, Merchant } from "@/types/database";
+import type { Account, Category } from "@/types/database";
 
 export interface TransactionRow {
   id: string;
@@ -23,27 +24,26 @@ export interface TransactionRow {
 export default async function TransactionsPage() {
   const supabase = await createClient();
 
-  const [{ data: transactions }, { data: accounts }, { data: categories }, { data: merchants }] =
-    await Promise.all([
-      supabase
-        .from("transactions")
-        .select(
-          "id, account_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, account:accounts!transactions_account_id_fkey(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
-        )
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(200),
-      supabase.from("accounts").select("*").order("created_at", { ascending: true }),
-      supabase.from("categories").select("*").order("name", { ascending: true }),
-      supabase.from("merchants").select("*").order("name", { ascending: true }),
-    ]);
+  const [{ data: transactions }, { data: accounts }, { data: categories }, merchants] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(
+        "id, account_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, account:accounts!transactions_account_id_fkey(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
+      )
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.from("accounts").select("*").order("created_at", { ascending: true }),
+    supabase.from("categories").select("*").order("name", { ascending: true }),
+    getMerchants(),
+  ]);
 
   return (
     <TransactionsClient
       transactions={(transactions ?? []) as unknown as TransactionRow[]}
       accounts={(accounts ?? []) as Account[]}
       categories={(categories ?? []) as Category[]}
-      merchants={(merchants ?? []) as Merchant[]}
+      merchants={merchants}
     />
   );
 }

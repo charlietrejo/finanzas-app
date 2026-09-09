@@ -1,4 +1,4 @@
-# Genera los íconos de marca de Northstar Finance (violeta #6161FF + monograma "N").
+# Genera los íconos de marca de Finanzas (violeta #6161FF + monograma "N").
 # Requiere Windows + System.Drawing (no funciona en macOS/Linux). Es un script de
 # un solo uso para regenerar los íconos si la marca cambia; no corre en CI.
 #

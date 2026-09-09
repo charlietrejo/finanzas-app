@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen w-full flex-col bg-cloud md:flex-row">
       <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-pebble bg-snow p-6 md:flex print:hidden">
         <div>
-          <p className="mb-8 text-xl font-light text-ink">Northstar Finance</p>
+          <p className="mb-8 text-xl font-light text-ink">Finanzas</p>
           <NavLinks orientation="vertical" />
         </div>
         <div className="flex flex-col gap-2">
@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           className="flex items-center justify-between border-b border-pebble bg-snow px-4 py-4 md:hidden print:hidden"
           style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
         >
-          <p className="text-lg font-light text-ink">Northstar Finance</p>
+          <p className="text-lg font-light text-ink">Finanzas</p>
           <form action={signOut}>
             <button type="submit" aria-label="Cerrar sesión" className="text-slate">
               <LogOut size={20} />

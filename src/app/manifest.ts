@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Northstar Finance",
+    name: "Finanzas",
     short_name: "Northstar",
     description: "Finanzas personales en MXN, mobile-first.",
     start_url: "/dashboard",
