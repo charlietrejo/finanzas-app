@@ -104,7 +104,13 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
                   </div>
                 </div>
 
-                <p className="text-2xl font-light text-ink">{formatMXN(debt.current_balance)}</p>
+                {/* Solo formato visual (signo negativo + rojo): debt.current_balance
+                    sigue siendo el saldo positivo real en la BD, sin tocar — lo usan
+                    tal cual los cálculos de pago/amortización de abajo y Reportes/
+                    Dashboard/patrimonio neto en otras pantallas. */}
+                <p className={debt.current_balance > 0 ? "text-2xl font-light text-red-600 dark:text-red-400" : "text-2xl font-light text-ink"}>
+                  {debt.current_balance > 0 ? `-${formatMXN(debt.current_balance)}` : formatMXN(debt.current_balance)}
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => setPayingId(payingId === debt.id ? null : debt.id)}>
