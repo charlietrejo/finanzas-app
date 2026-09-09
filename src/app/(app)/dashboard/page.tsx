@@ -7,28 +7,33 @@ import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
 import { getCurrentMonth } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
-import { getTotalCreditCardDebt } from "@/lib/credit-card-debt";
-import { getUpcomingDebtPayments } from "@/lib/debt-reminders";
+import { buildUnifiedDebts } from "@/lib/unified-debts";
+import { getUpcomingPayments } from "@/lib/upcoming-payments";
 import { CalendarClock } from "lucide-react";
-import type { Account, Budget, Debt } from "@/types/database";
+import type { Account, Budget, Debt, Transaction } from "@/types/database";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const month = getCurrentMonth();
 
-  const [{ data: accounts }, { data: budgets }, { data: debts }, spentByCategory] = await Promise.all([
-    supabase.from("accounts").select("*").order("created_at", { ascending: true }),
-    supabase.from("budgets").select("*").eq("month", `${month}-01`),
-    supabase.from("debts").select("*"),
-    getExpenseTotalsByCategory(supabase, month),
-  ]);
+  const [{ data: accounts }, { data: budgets }, { data: debts }, { data: recurringTransactions }, spentByCategory] =
+    await Promise.all([
+      supabase.from("accounts").select("*").order("created_at", { ascending: true }),
+      supabase.from("budgets").select("*").eq("month", `${month}-01`),
+      supabase.from("debts").select("*").is("archived_at", null),
+      supabase.from("transactions").select("*").eq("is_recurring", true),
+      getExpenseTotalsByCategory(supabase, month),
+    ]);
 
   const list = (accounts ?? []) as Account[];
   const totalBalance = list.reduce((sum, a) => sum + a.current_balance, 0);
 
   const debtList = (debts ?? []) as Debt[];
-  const creditCardDebt = getTotalCreditCardDebt(list);
-  const totalDebt = debtList.reduce((sum, d) => sum + d.current_balance, 0) + creditCardDebt;
+  const unifiedDebts = buildUnifiedDebts(debtList, list);
+  const totalDebt = unifiedDebts.reduce((sum, d) => sum + d.current_balance, 0);
+  const creditCardDebt = unifiedDebts
+    .filter((d) => d.source === "credit_account")
+    .reduce((sum, d) => sum + d.current_balance, 0);
 
   const budgetList = (budgets ?? []) as Budget[];
   const overOrWarningCount = budgetList.filter((b) => {
@@ -36,7 +41,11 @@ export default async function DashboardPage() {
     return status !== "ok";
   }).length;
 
-  const upcomingPayments = getUpcomingDebtPayments(debtList);
+  const upcomingPayments = getUpcomingPayments({
+    debts: debtList,
+    creditAccounts: list.filter((a) => a.type === "credit"),
+    recurringTransactions: (recurringTransactions ?? []) as Transaction[],
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -85,9 +94,12 @@ export default async function DashboardPage() {
           </div>
           <ul className="flex flex-col gap-2">
             {upcomingPayments.map((p) => (
-              <li key={p.debtId} className="flex items-center justify-between text-sm">
-                <span className="text-ink">{p.name}</span>
-                <Badge tone={p.daysUntil <= 1 ? "danger" : "warning"}>
+              <li key={p.key} className="flex items-center justify-between text-sm">
+                <span className="text-ink">
+                  {p.name}
+                  {p.amount != null && <span className="text-slate"> · {formatMXN(p.amount)}</span>}
+                </span>
+                <Badge tone={p.daysUntil <= 2 ? "danger" : "warning"}>
                   {p.daysUntil === 0 ? "Vence hoy" : p.daysUntil === 1 ? "Vence mañana" : `Vence en ${p.daysUntil} días`}
                 </Badge>
               </li>

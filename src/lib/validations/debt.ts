@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createDebtSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").max(80),
-  type: z.enum(["credit_card", "loan", "person"]),
+  type: z.enum(["loan", "personal"]),
   principal: z.coerce.number().min(0, "El saldo no puede ser negativo"),
   interest_rate: z.coerce.number().min(0, "La tasa no puede ser negativa"),
   minimum_payment: z.coerce.number().min(0, "El pago mínimo no puede ser negativo"),

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCreditCardDebts } from "@/lib/credit-card-debt";
 import { DebtsClient } from "./debts-client";
 import type { Account, Debt } from "@/types/database";
 
@@ -7,17 +6,9 @@ export default async function DebtsPage() {
   const supabase = await createClient();
 
   const [{ data: debts }, { data: accounts }] = await Promise.all([
-    supabase.from("debts").select("*").order("created_at", { ascending: true }),
+    supabase.from("debts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("accounts").select("*").order("created_at", { ascending: true }),
   ]);
 
-  const accountList = (accounts ?? []) as Account[];
-
-  return (
-    <DebtsClient
-      debts={(debts ?? []) as Debt[]}
-      accounts={accountList}
-      creditCardDebts={getCreditCardDebts(accountList)}
-    />
-  );
+  return <DebtsClient debts={(debts ?? []) as Debt[]} accounts={(accounts ?? []) as Account[]} />;
 }

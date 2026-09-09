@@ -147,10 +147,28 @@ function CreateAccountForm({ onDone }: { onDone: () => void }) {
         </div>
 
         {type === "credit" && (
-          <div>
-            <Label htmlFor="credit_limit">Límite de crédito (MXN)</Label>
-            <Input id="credit_limit" name="credit_limit" type="number" step="0.01" min="0" />
-          </div>
+          <>
+            <div>
+              <Label htmlFor="credit_limit">Límite de crédito (MXN)</Label>
+              <Input id="credit_limit" name="credit_limit" type="number" step="0.01" min="0" />
+            </div>
+            <div>
+              <Label htmlFor="interest_rate">Tasa de interés anual (%)</Label>
+              <Input id="interest_rate" name="interest_rate" type="number" step="0.01" min="0" />
+            </div>
+            <div>
+              <Label htmlFor="minimum_payment">Pago mínimo (MXN)</Label>
+              <Input id="minimum_payment" name="minimum_payment" type="number" step="0.01" min="0" />
+            </div>
+            <div>
+              <Label htmlFor="cutoff_day">Día de corte (1-31)</Label>
+              <Input id="cutoff_day" name="cutoff_day" type="number" step="1" min="1" max="31" />
+            </div>
+            <div>
+              <Label htmlFor="payment_due_day">Día límite de pago (1-31)</Label>
+              <Input id="payment_due_day" name="payment_due_day" type="number" step="1" min="1" max="31" />
+            </div>
+          </>
         )}
 
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
@@ -205,17 +223,65 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
         </div>
 
         {account.type === "credit" && (
-          <div>
-            <Label htmlFor="edit_credit_limit">Límite de crédito (MXN)</Label>
-            <Input
-              id="edit_credit_limit"
-              name="credit_limit"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={account.credit_limit ?? ""}
-            />
-          </div>
+          <>
+            <div>
+              <Label htmlFor="edit_credit_limit">Límite de crédito (MXN)</Label>
+              <Input
+                id="edit_credit_limit"
+                name="credit_limit"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={account.credit_limit ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_interest_rate">Tasa de interés anual (%)</Label>
+              <Input
+                id="edit_interest_rate"
+                name="interest_rate"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={account.interest_rate ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_minimum_payment">Pago mínimo (MXN)</Label>
+              <Input
+                id="edit_minimum_payment"
+                name="minimum_payment"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={account.minimum_payment ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_cutoff_day">Día de corte (1-31)</Label>
+              <Input
+                id="edit_cutoff_day"
+                name="cutoff_day"
+                type="number"
+                step="1"
+                min="1"
+                max="31"
+                defaultValue={account.cutoff_day ?? ""}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_payment_due_day">Día límite de pago (1-31)</Label>
+              <Input
+                id="edit_payment_due_day"
+                name="payment_due_day"
+                type="number"
+                step="1"
+                min="1"
+                max="31"
+                defaultValue={account.payment_due_day ?? ""}
+              />
+            </div>
+          </>
         )}
 
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}

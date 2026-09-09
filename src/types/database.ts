@@ -1,7 +1,9 @@
 export type AccountType = "cash" | "debit" | "credit" | "investment" | "savings";
 export type CategoryType = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
-export type DebtType = "credit_card" | "loan" | "person";
+// "credit_card" se conserva solo para leer deudas archivadas (legacy, ver
+// 016_credit_card_account_fields.sql) — ya no se ofrece al crear una deuda.
+export type DebtType = "credit_card" | "loan" | "personal";
 
 // Nota: se usan `type` (no `interface`) porque los Row de la tabla deben ser
 // estructuralmente asignables a Record<string, unknown> para satisfacer
@@ -21,6 +23,12 @@ export type Account = {
   initial_balance: number;
   current_balance: number;
   credit_limit: number | null;
+  // Datos de deuda de la tarjeta (solo type="credit"; sección 6 del doc: una
+  // cuenta de crédito ES la deuda, no se duplica en `debts`).
+  interest_rate: number | null;
+  minimum_payment: number | null;
+  cutoff_day: number | null;
+  payment_due_day: number | null;
   created_at: string;
 };
 
@@ -62,6 +70,9 @@ export type Debt = {
   minimum_payment: number;
   due_day: number | null;
   current_balance: number;
+  // No nulo = deuda archivada (ej. tarjeta migrada a `accounts`): se
+  // conserva el histórico, pero ya no se muestra activa. Ver sección 6.
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -120,11 +131,18 @@ export interface Database {
     Tables: {
       accounts: {
         Row: Account;
-        Insert: Omit<Account, "id" | "user_id" | "created_at" | "current_balance"> & {
+        Insert: Omit<
+          Account,
+          "id" | "user_id" | "created_at" | "current_balance" | "interest_rate" | "minimum_payment" | "cutoff_day" | "payment_due_day"
+        > & {
           id?: string;
           user_id?: string;
           created_at?: string;
           current_balance?: number;
+          interest_rate?: number | null;
+          minimum_payment?: number | null;
+          cutoff_day?: number | null;
+          payment_due_day?: number | null;
         };
         Update: Partial<Omit<Account, "id" | "user_id">>;
         Relationships: [];
@@ -175,12 +193,13 @@ export interface Database {
       };
       debts: {
         Row: Debt;
-        Insert: Omit<Debt, "id" | "user_id" | "created_at" | "current_balance" | "due_day"> & {
+        Insert: Omit<Debt, "id" | "user_id" | "created_at" | "current_balance" | "due_day" | "archived_at"> & {
           id?: string;
           user_id?: string;
           created_at?: string;
           current_balance?: number;
           due_day?: number | null;
+          archived_at?: string | null;
         };
         Update: Partial<Omit<Debt, "id" | "user_id">>;
         Relationships: [];
