@@ -34,6 +34,9 @@ Prioridad 3: Reportes y proyecciones avanzadas
 - Todo en MXN, sin conversión de moneda
 - Al crear una cuenta bancaria, catálogo preseleccionable de bancos principales de México (ver sección 3.8) para asignar nombre/ícono, sin integración real a los bancos (solo catalogación visual)
 - Cuentas tipo crédito permiten saldo negativo hasta un `credit_limit` definido; cuentas de efectivo/débito/ahorro NO permiten saldo negativo
+- **Una cuenta tipo crédito ES la deuda de esa tarjeta — no se duplica como registro en el módulo de Deudas.** Al crear una cuenta tipo crédito, se capturan también sus datos de deuda: tasa de interés, pago mínimo del periodo actual, día de corte y día límite de pago
+- El **pago mínimo** de una tarjeta de crédito es un campo editable en cualquier momento (no fijo), porque cambia cada periodo/estado de cuenta; el usuario lo actualiza manualmente cuando le llega su nuevo estado de cuenta
+- **Las cuentas tipo crédito son seleccionables como origen al registrar un gasto**, igual que cualquier otra cuenta (efectivo, débito, etc.) — un gasto pagado con tarjeta de crédito reduce el saldo disponible de esa cuenta hasta su `credit_limit`
 
 ### 3.2 Módulo: Transacciones
 - Registro de ingresos, gastos y transferencias entre cuentas
@@ -50,11 +53,26 @@ Prioridad 3: Reportes y proyecciones avanzadas
 - Comparativo presupuestado vs. real por periodo
 
 ### 3.4 Módulo: Deudas
-- Registro de deudas (tarjeta, préstamo, persona)
-- Tasa de interés, pago mínimo, fecha de corte/pago
-- Simulador de amortización (tabla de pagos)
-- Estrategias de pago (bola de nieve / avalancha) como sugerencia visual
-- Pago de deuda desde una cuenta (ej. nómina) descuenta el saldo de esa cuenta y reduce `current_balance` de la deuda en la misma operación atómica
+
+**Este módulo combina dos fuentes de datos distintas, sin duplicar captura:**
+
+1. **Tarjetas de crédito** — se muestran automáticamente a partir de las cuentas tipo crédito (sección 3.1). La deuda es, en tiempo real, `credit_limit - saldo_disponible` de esa cuenta. No se capturan por separado aquí; solo se leen. Editar tasa de interés, pago mínimo o fechas de corte/pago se hace desde la cuenta misma (sección 3.1), no desde este módulo
+2. **Préstamos y deudas personales** (con alguien, no con un banco) — estos SÍ se capturan manualmente aquí porque no son una cuenta desde la que se paguen gastos del día a día
+
+**Funciones del módulo (aplican a ambas fuentes combinadas en una sola vista):**
+- Simulador de amortización (tabla de pagos) para préstamos y para tarjetas de crédito
+- Estrategias de pago (bola de nieve / avalancha) considerando el total de deudas (tarjetas + préstamos + personales)
+- Pago de deuda desde una cuenta (ej. nómina):
+  - Si es una **tarjeta de crédito**: el pago es en realidad una transferencia entre cuentas (de la cuenta origen hacia la cuenta de crédito), que reduce el saldo usado de la tarjeta — no requiere una tabla `debt_payments` separada, es una `transaction` tipo transferencia
+  - Si es un **préstamo/deuda personal**: descuenta el saldo de la cuenta origen y reduce `current_balance` en `debts`, registrado en `debt_payments`, en la misma operación atómica
+
+### 3.4.1 Módulo: Dashboard — Alertas de próximos pagos
+- Zona visible en el Dashboard (pantalla principal) que lista los próximos pagos a vencer, ordenados por fecha, combinando:
+  - Tarjetas de crédito: próxima fecha límite de pago (`payment_due_day`) y su pago mínimo actual
+  - Préstamos/deudas personales: próxima fecha de pago (`due_day`) de `debts`
+  - Transacciones recurrentes próximas a ejecutarse (ej. renta, suscripciones)
+- Ventana configurable de "próximos N días" (default: 7 días)
+- Indicador visual de urgencia (ej. rojo si vence en ≤2 días, ámbar si ≤7 días)
 
 ### 3.5 Módulo: Metas de ahorro
 - Meta con monto objetivo y fecha límite
@@ -88,6 +106,16 @@ BBVA, Santander, Banorte, Citibanamex, HSBC, Scotiabank, Inbursa, Banco Azteca, 
 - Streaming/suscripciones: Netflix, Spotify, Disney+, Amazon Prime
 - Telecom: Telcel, AT&T México, Movistar, Izzi, Totalplay
 
+**Categorías por defecto** (precargadas para que el usuario no arranque con la lista vacía; siguen siendo editables/ampliables desde Configuración):
+
+*Ingresos:*
+Nómina/Salario, Freelance/Negocio propio, Reembolsos, Otros ingresos
+
+*Gastos:*
+Comida y supermercado, Restaurantes y antojos, Transporte, Vivienda (renta/hipoteca), Servicios (luz, agua, gas, internet), Salud, Entretenimiento, Ropa y accesorios, Educación, Suscripciones, Pago de tarjetas/deudas, Ahorro e inversión, Mascotas, Regalos y donaciones, **Otros gastos** (categoría genérica de cajón para lo que no encaje en ninguna otra, distinta de dejar el campo vacío)
+
+El campo de categoría en el formulario de transacciones debe listar estas categorías por defecto desde el primer uso — dejar el movimiento "sin categoría" debe ser una opción explícita más, no la única disponible.
+
 ## 4. Modelo de datos (borrador inicial — Postgres/Supabase)
 
 ```
@@ -95,7 +123,12 @@ users (manejado por Supabase Auth)
 
 accounts
   id, user_id, name, type, bank_name (nullable), initial_balance,
-  credit_limit (nullable, solo type=credit), created_at
+  credit_limit (nullable, solo type=credit),
+  interest_rate (nullable, solo type=credit),
+  minimum_payment (nullable, solo type=credit — editable por el usuario cada periodo),
+  cutoff_day (nullable, solo type=credit — día de corte del estado de cuenta),
+  payment_due_day (nullable, solo type=credit — día límite de pago),
+  created_at
 
 categories
   id, user_id, name, parent_id (nullable), type (income/expense), icon, color
@@ -110,9 +143,10 @@ transactions
 budgets
   id, user_id, category_id, month, amount_limit, alert_threshold_pct
 
-debts
-  id, user_id, name, principal, interest_rate, minimum_payment,
-  due_day, current_balance, created_at
+debts (SOLO préstamos y deudas personales — las tarjetas de crédito viven en `accounts`, no aquí)
+  id, user_id, name, type (loan/personal), principal, interest_rate, minimum_payment,
+  due_day, current_balance, archived_at (nullable — se usa para registros antiguos de
+  tarjeta que ya no se muestran activos, sin borrarlos), created_at
 
 debt_payments
   id, debt_id, account_id, amount, date, note
@@ -137,7 +171,24 @@ Row Level Security: todas las tablas con `user_id` filtradas por `user_id = auth
 - Costo: $0 en todos los servicios mientras se mantenga dentro de límites de free tier
 - Sin necesidad de Mac, Xcode ni cuenta de Apple Developer
 
-## 6. Fases sugeridas de desarrollo
+## 6. Corrección de diseño: tarjetas de crédito (post-Fase 3)
+
+Se detectó que el diseño original trataba "cuenta de tarjeta de crédito" y "deuda de tarjeta de crédito" como dos entidades separadas, causando que no se sincronizaran entre sí y que no se pudiera pagar gastos con tarjeta de crédito. La corrección aplicada en este documento (secciones 3.1, 3.4, 3.4.1 y el modelo de datos) es:
+
+1. Las tarjetas de crédito son únicamente `accounts` tipo `credit` (con sus campos de interés/pago mínimo/fechas); ya no existen como registro duplicado en `debts`
+2. `debts` queda reservada solo para préstamos y deudas personales
+3. Las cuentas tipo crédito deben ser seleccionables al registrar un gasto
+4. Se agrega el módulo de alertas de próximos pagos en el Dashboard (3.4.1)
+
+**Tareas de migración/corrección para Claude Code:**
+- Agregar las columnas nuevas a `accounts` (interest_rate, minimum_payment, cutoff_day, payment_due_day)
+- Agregar la columna `archived_at` a `debts`
+- Para cada registro existente de `debts` con type=tarjeta: copiar sus valores (interest_rate, minimum_payment, fechas) hacia la cuenta de crédito correspondiente, y marcarlo con `archived_at = now()` en vez de borrarlo, para no perder el dato histórico real capturado
+- Corregir el selector de cuentas en el formulario de gastos para incluir cuentas tipo crédito
+- Actualizar la vista de Deudas para combinar ambas fuentes (accounts tipo crédito + registros activos de debts, es decir con `archived_at IS NULL`) en una sola lista
+- Construir la zona de alertas de próximos pagos en el Dashboard
+
+## 7. Fases sugeridas de desarrollo
 
 1. **Fase 1 — Base**: Next.js + Supabase Auth + Cuentas + Transacciones (CRUD completo)
 2. **Fase 2 — Control**: Presupuestos + alertas
@@ -154,7 +205,7 @@ Row Level Security: todas las tablas con `user_id` filtradas por `user_id = auth
    - Pruebas de RLS: un usuario no puede ver ni modificar cuentas/transacciones/deudas de otro usuario
    - Pruebas de reportes: los totales de flujo de efectivo y patrimonio neto cuadran contra la suma manual de transacciones de prueba
 
-## 7. Diseño visual
+## 8. Diseño visual
 
 Se usará como referencia de diseño el sistema de **monday.com** (vía Refero Styles: https://styles.refero.design/style/77ee57e9-9f8e-4ec1-93f7-cc1c4b84307a), adaptado a Tailwind v4.
 
@@ -175,7 +226,7 @@ Se usará como referencia de diseño el sistema de **monday.com** (vía Refero S
 
 El archivo DESIGN.md completo (tokens CSS, variables Tailwind v4, guía de componentes) se obtiene directamente del link de Refero al iniciar el proyecto con Claude Code.
 
-## 8. Límites del free tier a monitorear
+## 9. Límites del free tier a monitorear
 
 - Supabase free: 500MB BD, pausa el proyecto tras 7 días de inactividad (hay que reactivarlo entrando al dashboard)
 - Vercel / Cloudflare Pages: sin costo para tráfico personal, sin límite práctico para este caso de uso
