@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMerchants } from "@/lib/merchants-data";
 import { TransactionsClient } from "./transactions-client";
-import type { Account, Category, Debt } from "@/types/database";
+import type { Account, Category, Debt, RecurringFrequency } from "@/types/database";
 
 export interface TransactionRow {
   id: string;
@@ -16,6 +16,9 @@ export interface TransactionRow {
   note: string | null;
   tags: string[];
   is_recurring: boolean;
+  recurring_frequency: RecurringFrequency | null;
+  recurring_interval_days: number | null;
+  recurring_end_date: string | null;
   account: { name: string } | null;
   debt: { name: string } | null;
   to_account: { name: string } | null;
@@ -31,7 +34,7 @@ export default async function TransactionsPage() {
       supabase
         .from("transactions")
         .select(
-          "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
+          "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
         )
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })

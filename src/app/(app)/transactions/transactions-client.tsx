@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
 import { Plus, Pencil, Trash2, X, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
   createCategory,
   type ActionState,
 } from "./actions";
-import type { Account, Category, Debt, Merchant, TransactionType } from "@/types/database";
+import type { Account, Category, Debt, Merchant, RecurringFrequency, TransactionType } from "@/types/database";
 import type { TransactionRow } from "./page";
 
 interface Props {
@@ -37,6 +38,13 @@ const TYPE_BADGE_TONE: Record<TransactionType, "success" | "danger" | "info"> = 
   transfer: "info",
 };
 
+const RECURRING_FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
+  weekly: "Semanal",
+  monthly: "Mensual",
+  annual: "Anual",
+  custom: "Personalizada (cada N días)",
+};
+
 export function TransactionsClient({ transactions, accounts, creditCards, categories: initialCategories, merchants }: Props) {
   const [categories, setCategories] = useState(initialCategories);
   const [creating, setCreating] = useState(false);
@@ -51,9 +59,9 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
         <Card>
           <p className="text-sm text-slate">
             Necesitas al menos una cuenta antes de registrar movimientos. Ve a{" "}
-            <a href="/accounts" className="font-medium text-monday-violet">
+            <Link href="/accounts" className="font-medium text-monday-violet">
               Cuentas
-            </a>{" "}
+            </Link>{" "}
             para crear una.
           </p>
         </Card>
@@ -206,7 +214,10 @@ function TransactionForm({
   const [categoryId, setCategoryId] = useState<string>(transaction?.category_id ?? "");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showMerchantList, setShowMerchantList] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(transaction?.is_recurring ?? false);
+  const [isRecurring, setIsRecurring] = useState((transaction?.is_recurring ?? false) && type !== "transfer");
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>(
+    transaction?.recurring_frequency ?? "monthly"
+  );
 
   const filteredMerchants = useMemo(() => {
     if (!merchantQuery.trim()) return merchants.slice(0, 8);
@@ -276,7 +287,11 @@ function TransactionForm({
             id="type"
             name="type"
             value={type}
-            onChange={(e) => setType(e.target.value as TransactionType)}
+            onChange={(e) => {
+              const nextType = e.target.value as TransactionType;
+              setType(nextType);
+              if (nextType === "transfer") setIsRecurring(false);
+            }}
           >
             <option value="expense">Gasto</option>
             <option value="income">Ingreso</option>
@@ -284,10 +299,73 @@ function TransactionForm({
           </Select>
         </div>
 
+        {type !== "transfer" && (
+          <div className="flex flex-col gap-3 rounded-card bg-cloud p-4">
+            <div className="flex items-center gap-2">
+              <input
+                id="is_recurring"
+                name="is_recurring"
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="h-4 w-4 rounded border-mist text-monday-violet focus:ring-monday-violet"
+              />
+              <Label htmlFor="is_recurring" className="mb-0">
+                ¿Es recurrente?
+              </Label>
+            </div>
+
+            {isRecurring && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="recurring_frequency">Frecuencia</Label>
+                  <Select
+                    id="recurring_frequency"
+                    name="recurring_frequency"
+                    value={recurringFrequency}
+                    onChange={(e) => setRecurringFrequency(e.target.value as RecurringFrequency)}
+                  >
+                    {(Object.keys(RECURRING_FREQUENCY_LABELS) as RecurringFrequency[]).map((f) => (
+                      <option key={f} value={f}>
+                        {RECURRING_FREQUENCY_LABELS[f]}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {recurringFrequency === "custom" && (
+                  <div>
+                    <Label htmlFor="recurring_interval_days">Cada cuántos días</Label>
+                    <Input
+                      id="recurring_interval_days"
+                      name="recurring_interval_days"
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      defaultValue={transaction?.recurring_interval_days ?? undefined}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="recurring_end_date">Fecha de fin (opcional)</Label>
+                  <Input
+                    id="recurring_end_date"
+                    name="recurring_end_date"
+                    type="date"
+                    defaultValue={transaction?.recurring_end_date ?? ""}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="pay_with">
-              {type === "transfer" ? "Cuenta origen" : type === "expense" ? "Pagar con" : "Cuenta"}
+              {type === "transfer" ? "Cuenta origen" : type === "expense" ? "Pagar con" : "Cuenta destino"}
             </Label>
             <Select id="pay_with" name="pay_with" required defaultValue={defaultPayWith}>
               {payWithOptions.map((o) => (
@@ -340,6 +418,25 @@ function TransactionForm({
         </div>
 
         {type !== "transfer" && (
+          <div>
+            <Label htmlFor="category_id">Categoría</Label>
+            <Select
+              id="category_id"
+              name="category_id"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Sin categoría</option>
+              {categoriesForType.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        {type === "expense" && (
           <>
             <div className="relative">
               <Label htmlFor="merchant_search">Comercio (opcional)</Label>
@@ -383,62 +480,16 @@ function TransactionForm({
             )}
 
             <div>
-              <Label htmlFor="category_id">Categoría</Label>
-              <Select
-                id="category_id"
-                name="category_id"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="">Sin categoría</option>
-                {categoriesForType.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
+              <Label htmlFor="tags">Etiquetas (separadas por coma)</Label>
+              <Input id="tags" name="tags" defaultValue={transaction?.tags.join(", ")} placeholder="viaje, trabajo" />
             </div>
           </>
         )}
 
         <div>
-          <Label htmlFor="tags">Etiquetas (separadas por coma)</Label>
-          <Input id="tags" name="tags" defaultValue={transaction?.tags.join(", ")} placeholder="viaje, trabajo" />
-        </div>
-
-        <div>
           <Label htmlFor="note">Nota</Label>
           <Input id="note" name="note" defaultValue={transaction?.note ?? ""} maxLength={500} />
         </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            id="is_recurring"
-            name="is_recurring"
-            type="checkbox"
-            checked={isRecurring}
-            onChange={(e) => setIsRecurring(e.target.checked)}
-            className="h-4 w-4 rounded border-mist text-monday-violet focus:ring-monday-violet"
-          />
-          <Label htmlFor="is_recurring" className="mb-0">
-            Es recurrente
-          </Label>
-        </div>
-
-        {isRecurring && (
-          <div>
-            <Label htmlFor="recurring_frequency">Frecuencia</Label>
-            <Select
-              id="recurring_frequency"
-              name="recurring_frequency"
-              defaultValue={transaction?.is_recurring ? undefined : "monthly"}
-            >
-              <option value="monthly">Mensual</option>
-              <option value="weekly">Semanal</option>
-              <option value="daily">Diaria</option>
-            </Select>
-          </div>
-        )}
 
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
 

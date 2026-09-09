@@ -1,4 +1,4 @@
-import type { RecurringRule } from "@/types/database";
+import type { RecurringFrequency } from "@/types/database";
 
 export type UpcomingPaymentSource = "debt" | "credit_account" | "recurring_transaction";
 
@@ -41,26 +41,32 @@ function addDays(date: Date, days: number): Date {
 }
 
 /**
- * `recurring_rule.next_date` se guarda al crear la transacción y nunca se
- * actualiza solo (no hay job que lo avance) — así que aquí se calcula la
- * próxima ocurrencia real avanzando la fecha ancla por `frequency`/`interval`
- * las veces que hagan falta hasta llegar a hoy o después. Para "monthly" se
- * recalcula cada paso desde el día original (no desde el día ya recortado del
- * paso anterior), para que un ancla en día 31 no quede fija en 28/30 para
- * siempre tras pasar por un mes corto.
+ * El ancla de una transacción recurrente es su propia columna `date`
+ * (sección 3.2/4 del doc — ya no se guarda un "next_date" aparte que haya
+ * que avanzar y persistir); aquí se calcula la próxima ocurrencia real desde
+ * ese ancla, avanzando por `frequency` (semanal/mensual/anual/personalizada
+ * cada N días) las veces que hagan falta hasta llegar a hoy o después. Para
+ * "monthly"/"annual" se recalcula cada paso desde el día original (no desde
+ * el día ya recortado del paso anterior), para que un ancla en día 31 no
+ * quede fija en 28/30 para siempre tras pasar por un mes corto.
  */
-function nextRecurringDate(rule: RecurringRule, today: Date): Date {
-  const [y, m, d] = rule.next_date.slice(0, 10).split("-").map(Number);
+function nextRecurringDate(
+  anchorDate: string,
+  frequency: RecurringFrequency,
+  intervalDays: number | null,
+  today: Date
+): Date {
+  const [y, m, d] = anchorDate.slice(0, 10).split("-").map(Number);
   const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const interval = Math.max(1, rule.interval);
   let iterations = 0;
 
-  if (rule.frequency === "monthly") {
+  if (frequency === "monthly" || frequency === "annual") {
+    const monthStep = frequency === "annual" ? 12 : 1;
     let monthIndex = m - 1;
     let year = y;
     let date = new Date(Date.UTC(year, monthIndex, Math.min(d, daysInMonth(year, monthIndex))));
     while (date.getTime() < todayMidnight.getTime() && iterations < 10_000) {
-      monthIndex += interval;
+      monthIndex += monthStep;
       year += Math.floor(monthIndex / 12);
       monthIndex = ((monthIndex % 12) + 12) % 12;
       date = new Date(Date.UTC(year, monthIndex, Math.min(d, daysInMonth(year, monthIndex))));
@@ -69,7 +75,7 @@ function nextRecurringDate(rule: RecurringRule, today: Date): Date {
     return date;
   }
 
-  const stepDays = rule.frequency === "daily" ? interval : interval * 7;
+  const stepDays = frequency === "weekly" ? 7 : Math.max(1, intervalDays ?? 1);
   let date = new Date(Date.UTC(y, m - 1, d));
   while (date.getTime() < todayMidnight.getTime() && iterations < 10_000) {
     date = addDays(date, stepDays);
@@ -104,7 +110,10 @@ interface RecurringTransactionLike {
   id: string;
   note: string | null;
   amount: number;
-  recurring_rule: RecurringRule | null;
+  date: string;
+  recurring_frequency: RecurringFrequency | null;
+  recurring_interval_days: number | null;
+  recurring_end_date: string | null;
 }
 
 /**
@@ -140,16 +149,15 @@ export function getUpcomingPayments(
   }
 
   for (const tx of recurringTransactions) {
-    if (!tx.recurring_rule) continue;
+    if (!tx.recurring_frequency) continue;
+    const next = nextRecurringDate(tx.date, tx.recurring_frequency, tx.recurring_interval_days, today);
+    if (tx.recurring_end_date) {
+      const [ey, em, ed] = tx.recurring_end_date.slice(0, 10).split("-").map(Number);
+      const end = new Date(Date.UTC(ey, em - 1, ed));
+      if (next.getTime() > end.getTime()) continue;
+    }
     upcoming.push(
-      toUpcoming(
-        `recurring_transaction:${tx.id}`,
-        "recurring_transaction",
-        tx.note || "Movimiento recurrente",
-        tx.amount,
-        nextRecurringDate(tx.recurring_rule, today),
-        today
-      )
+      toUpcoming(`recurring_transaction:${tx.id}`, "recurring_transaction", tx.note || "Movimiento recurrente", tx.amount, next, today)
     );
   }
 

@@ -13,7 +13,9 @@ export const transactionFormSchema = z
     note: z.string().max(500).optional().nullable(),
     tags: z.array(z.string().min(1).max(30)).max(10).optional().default([]),
     is_recurring: z.boolean().optional().default(false),
-    recurring_frequency: z.enum(["daily", "weekly", "monthly"]).optional().nullable(),
+    recurring_frequency: z.enum(["weekly", "monthly", "annual", "custom"]).optional().nullable(),
+    recurring_interval_days: z.coerce.number().int().positive().optional().nullable(),
+    recurring_end_date: z.string().optional().nullable(),
   })
   .refine((data) => data.type !== "transfer" || !!data.to_account_id, {
     message: "Selecciona la cuenta destino",
@@ -34,6 +36,30 @@ export const transactionFormSchema = z
   .refine((data) => data.type !== "expense" || !!data.account_id !== !!data.debt_id, {
     message: "Elige una cuenta o una tarjeta para el gasto, no ambas ni ninguna",
     path: ["account_id"],
+  })
+  .refine((data) => data.type === "expense" || !data.merchant_id, {
+    message: "El comercio solo aplica a gastos",
+    path: ["merchant_id"],
+  })
+  .refine((data) => data.type === "expense" || (data.tags?.length ?? 0) === 0, {
+    message: "Las etiquetas solo aplican a gastos",
+    path: ["tags"],
+  })
+  .refine((data) => data.type !== "transfer" || !data.category_id, {
+    message: "Las transferencias no llevan categoría",
+    path: ["category_id"],
+  })
+  .refine((data) => data.type !== "transfer" || !data.is_recurring, {
+    message: "Una transferencia no puede ser recurrente",
+    path: ["is_recurring"],
+  })
+  .refine((data) => !data.is_recurring || !!data.recurring_frequency, {
+    message: "Selecciona la frecuencia de la recurrencia",
+    path: ["recurring_frequency"],
+  })
+  .refine((data) => data.recurring_frequency !== "custom" || !!data.recurring_interval_days, {
+    message: "Indica cada cuántos días se repite",
+    path: ["recurring_interval_days"],
   });
 
 export type TransactionFormValues = z.infer<typeof transactionFormSchema>;

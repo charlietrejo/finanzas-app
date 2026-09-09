@@ -4,16 +4,12 @@ export type AccountType = "cash" | "debit" | "credit" | "investment" | "savings"
 export type CategoryType = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
 export type DebtType = "credit_card" | "loan" | "personal";
+// "custom" usa recurring_interval_days; las otras tres tienen cadencia fija.
+export type RecurringFrequency = "weekly" | "monthly" | "annual" | "custom";
 
 // Nota: se usan `type` (no `interface`) porque los Row de la tabla deben ser
 // estructuralmente asignables a Record<string, unknown> para satisfacer
 // GenericSchema de @supabase/postgrest-js; las interfaces no lo son.
-export type RecurringRule = {
-  frequency: "daily" | "weekly" | "monthly";
-  interval: number;
-  next_date: string;
-};
-
 export type Account = {
   id: string;
   user_id: string;
@@ -119,6 +115,7 @@ export type Transaction = {
   account_id: string | null;
   debt_id: string | null;
   to_account_id: string | null;
+  // category_id: no aplica a transfer. merchant_id/tags: solo aplican a expense.
   category_id: string | null;
   merchant_id: string | null;
   type: TransactionType;
@@ -127,7 +124,12 @@ export type Transaction = {
   note: string | null;
   tags: string[];
   is_recurring: boolean;
-  recurring_rule: RecurringRule | null;
+  // Los 3 solo se llenan si is_recurring; recurring_interval_days solo si
+  // recurring_frequency="custom". El ancla de la recurrencia es `date`
+  // (sección 3.2/4 del doc — ya no se guarda un "next_date" aparte).
+  recurring_frequency: RecurringFrequency | null;
+  recurring_interval_days: number | null;
+  recurring_end_date: string | null;
   created_at: string;
 };
 
@@ -270,8 +272,10 @@ export interface Database {
           p_note?: string | null;
           p_tags?: string[];
           p_is_recurring?: boolean;
-          p_recurring_rule?: RecurringRule | null;
           p_debt_id?: string | null;
+          p_recurring_frequency?: RecurringFrequency | null;
+          p_recurring_interval_days?: number | null;
+          p_recurring_end_date?: string | null;
         };
         Returns: Transaction;
       };
@@ -288,8 +292,10 @@ export interface Database {
           p_note?: string | null;
           p_tags?: string[];
           p_is_recurring?: boolean;
-          p_recurring_rule?: RecurringRule | null;
           p_debt_id?: string | null;
+          p_recurring_frequency?: RecurringFrequency | null;
+          p_recurring_interval_days?: number | null;
+          p_recurring_end_date?: string | null;
         };
         Returns: Transaction;
       };

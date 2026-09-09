@@ -46,10 +46,20 @@ Prioridad 3: Reportes y proyecciones avanzadas
 - Categorías y subcategorías personalizables
 - Catálogo precargado de negocios/comercios comunes en México (ver sección 3.8) para autocompletar el campo de comercio y sugerir categoría automáticamente
 - Etiquetas (tags) libres para filtrado cruzado
-- Transacciones recurrentes (renta, suscripciones, nómina)
 - Nota de texto libre por transacción (sin adjuntar archivos/imágenes)
 - **Regla de negocio (cuentas):** no se puede registrar un gasto o transferencia que deje saldo negativo en una cuenta
 - **Regla de negocio (tarjetas de crédito):** no se puede registrar un gasto con tarjeta que deje `current_balance` por encima de `credit_limit` de esa tarjeta
+
+**Formulario dinámico según tipo de movimiento** (el formulario cambia los campos que muestra en vivo, no es un solo formulario fijo con todo):
+
+1. **Selector de tipo primero**: Ingreso / Gasto / Transferencia — esto decide todo lo demás
+2. **¿Es recurrente?** se pregunta justo después del tipo (antes que comercio/etiquetas/nota), porque si es recurrente cambia qué más se pide:
+   - Si es recurrente, se pide de una vez: **frecuencia** (semanal / mensual / anual / personalizada cada N días) y opcionalmente **fecha de fin** (si no se da, se repite indefinidamente)
+   - Ejemplos de referencia que el formulario debe soportar sin fricción: pago mensual de Telmex (frecuencia mensual), suscripción de Netflix (frecuencia mensual), anualidad de Strava (frecuencia anual)
+3. **Campos restantes, condicionados al tipo:**
+   - **Ingreso**: cuenta destino, categoría, monto, fecha, nota. **NO muestra comercio ni etiquetas** (no aplican a un ingreso)
+   - **Gasto**: origen (cuenta o tarjeta de crédito, ver arriba), categoría, comercio (con autocompletado), etiquetas, monto, fecha, nota
+   - **Transferencia**: cuenta origen, cuenta destino, monto, fecha, nota. Sin categoría, sin comercio, sin etiquetas. No aplica el flujo de "recurrente" del paso 2 para transferencias (se puede omitir ese paso cuando el tipo es transferencia)
 
 ### 3.3 Módulo: Presupuestos
 - Presupuesto mensual por categoría
@@ -135,10 +145,14 @@ merchants (catálogo, no ligado a user_id — dato de referencia compartido)
 transactions
   id, user_id, account_id (nullable), debt_id (nullable — solo cuando type=expense
     y se paga con tarjeta de crédito; en ese caso account_id es NULL),
-  category_id, merchant_id (nullable), type (income/expense/transfer),
-  amount, date, note, is_recurring, recurring_rule, created_at
+  category_id, merchant_id (nullable — solo aplica a type=expense), type (income/expense/transfer),
+  amount, date, note, tags (nullable — solo aplica a type=expense),
+  is_recurring, recurring_frequency (nullable — weekly/monthly/annual/custom, solo si is_recurring),
+  recurring_interval_days (nullable — solo si recurring_frequency=custom),
+  recurring_end_date (nullable — si es NULL, la recurrencia no tiene fecha de fin),
+  created_at
   -- regla: exactamente uno de account_id / debt_id debe estar definido en un gasto;
-  -- income y transfer siempre usan account_id (nunca debt_id)
+  -- income y transfer siempre usan account_id (nunca debt_id), y nunca llevan merchant_id ni tags
 
 budgets
   id, user_id, category_id, month, amount_limit, alert_threshold_pct

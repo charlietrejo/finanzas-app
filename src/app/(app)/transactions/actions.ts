@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { transactionFormSchema } from "@/lib/validations/transaction";
-import type { RecurringRule } from "@/types/database";
 
 export type ActionState = { error?: string } | null;
 
@@ -15,6 +14,7 @@ function splitPayWith(value: FormDataEntryValue | null): { account_id: string | 
 
 function parseFormData(formData: FormData) {
   const { account_id, debt_id } = splitPayWith(formData.get("pay_with"));
+  const isRecurring = formData.get("is_recurring") === "on";
   return transactionFormSchema.safeParse({
     type: formData.get("type"),
     account_id,
@@ -29,18 +29,11 @@ function parseFormData(formData: FormData) {
       ?.split(",")
       .map((t) => t.trim())
       .filter(Boolean),
-    is_recurring: formData.get("is_recurring") === "on",
-    recurring_frequency: formData.get("recurring_frequency") || null,
+    is_recurring: isRecurring,
+    recurring_frequency: isRecurring ? formData.get("recurring_frequency") || null : null,
+    recurring_interval_days: isRecurring ? formData.get("recurring_interval_days") || null : null,
+    recurring_end_date: isRecurring ? formData.get("recurring_end_date") || null : null,
   });
-}
-
-function buildRecurringRule(
-  isRecurring: boolean,
-  frequency: "daily" | "weekly" | "monthly" | null | undefined,
-  date: string
-): RecurringRule | null {
-  if (!isRecurring || !frequency) return null;
-  return { frequency, interval: 1, next_date: date };
 }
 
 export async function createTransaction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -63,7 +56,9 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
     p_note: d.note ?? null,
     p_tags: d.tags ?? [],
     p_is_recurring: d.is_recurring ?? false,
-    p_recurring_rule: buildRecurringRule(d.is_recurring ?? false, d.recurring_frequency, d.date),
+    p_recurring_frequency: d.recurring_frequency ?? null,
+    p_recurring_interval_days: d.recurring_interval_days ?? null,
+    p_recurring_end_date: d.recurring_end_date ?? null,
   });
 
   if (error) {
@@ -102,7 +97,9 @@ export async function updateTransaction(
     p_note: d.note ?? null,
     p_tags: d.tags ?? [],
     p_is_recurring: d.is_recurring ?? false,
-    p_recurring_rule: buildRecurringRule(d.is_recurring ?? false, d.recurring_frequency, d.date),
+    p_recurring_frequency: d.recurring_frequency ?? null,
+    p_recurring_interval_days: d.recurring_interval_days ?? null,
+    p_recurring_end_date: d.recurring_end_date ?? null,
   });
 
   if (error) {

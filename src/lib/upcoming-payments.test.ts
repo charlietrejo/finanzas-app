@@ -70,7 +70,7 @@ describe("getUpcomingPayments — tarjetas de crédito (payment_due_day)", () =>
 });
 
 describe("getUpcomingPayments — transacciones recurrentes", () => {
-  it("avanza una regla diaria varias veces si next_date quedó muy atrás", () => {
+  it("avanza una frecuencia personalizada (cada N días) varias veces si el ancla quedó muy atrás", () => {
     const result = getUpcomingPayments(
       {
         recurringTransactions: [
@@ -78,7 +78,10 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
             id: "t1",
             note: "Suscripción",
             amount: 150,
-            recurring_rule: { frequency: "daily", interval: 3, next_date: "2026-02-25" },
+            date: "2026-02-25",
+            recurring_frequency: "custom",
+            recurring_interval_days: 3,
+            recurring_end_date: null,
           },
         ],
       },
@@ -97,7 +100,10 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
             id: "t1",
             note: "Renta semanal",
             amount: 200,
-            recurring_rule: { frequency: "weekly", interval: 1, next_date: "2026-02-15" },
+            date: "2026-02-15",
+            recurring_frequency: "weekly",
+            recurring_interval_days: null,
+            recurring_end_date: null,
           },
         ],
       },
@@ -107,7 +113,7 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
     expect(result[0].dueDate).toBe("2026-03-01");
   });
 
-  it("avanza una regla mensual respetando el fin de mes", () => {
+  it("avanza una regla mensual respetando el fin de mes (ej. Netflix el día 31)", () => {
     const result = getUpcomingPayments(
       {
         recurringTransactions: [
@@ -115,7 +121,10 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
             id: "t1",
             note: "Netflix",
             amount: 219,
-            recurring_rule: { frequency: "monthly", interval: 1, next_date: "2026-01-31" },
+            date: "2026-01-31",
+            recurring_frequency: "monthly",
+            recurring_interval_days: null,
+            recurring_end_date: null,
           },
         ],
       },
@@ -123,6 +132,27 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
       40
     );
     expect(result[0].dueDate).toBe("2026-03-31");
+  });
+
+  it("avanza una regla anual (ej. anualidad de Strava)", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            id: "t1",
+            note: "Strava",
+            amount: 700,
+            date: "2025-04-10",
+            recurring_frequency: "annual",
+            recurring_interval_days: null,
+            recurring_end_date: null,
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z"),
+      60
+    );
+    expect(result[0].dueDate).toBe("2026-04-10");
   });
 
   it("usa 'Movimiento recurrente' cuando la transacción no tiene nota", () => {
@@ -133,7 +163,10 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
             id: "t1",
             note: null,
             amount: 100,
-            recurring_rule: { frequency: "daily", interval: 1, next_date: "2026-03-01" },
+            date: "2026-03-01",
+            recurring_frequency: "custom",
+            recurring_interval_days: 1,
+            recurring_end_date: null,
           },
         ],
       },
@@ -142,10 +175,35 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
     expect(result[0].name).toBe("Movimiento recurrente");
   });
 
-  it("ignora transacciones sin recurring_rule", () => {
+  it("ignora transacciones sin recurring_frequency", () => {
     const result = getUpcomingPayments(
-      { recurringTransactions: [{ id: "t1", note: "X", amount: 10, recurring_rule: null }] },
+      {
+        recurringTransactions: [
+          { id: "t1", note: "X", amount: 10, date: "2026-03-01", recurring_frequency: null, recurring_interval_days: null, recurring_end_date: null },
+        ],
+      },
       new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("excluye una recurrencia cuya próxima ocurrencia cae después de recurring_end_date", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            id: "t1",
+            note: "Suscripción con fin",
+            amount: 100,
+            date: "2026-02-01",
+            recurring_frequency: "monthly",
+            recurring_interval_days: null,
+            recurring_end_date: "2026-02-15",
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z"),
+      40
     );
     expect(result).toEqual([]);
   });
@@ -160,7 +218,15 @@ describe("getUpcomingPayments — combinado", () => {
           { id: "a1", name: "Cercana", type: "credit_card", due_day: null, payment_due_day: 3, minimum_payment: 100 },
         ],
         recurringTransactions: [
-          { id: "t1", note: "Media", amount: 50, recurring_rule: { frequency: "daily", interval: 1, next_date: "2026-03-05" } },
+          {
+            id: "t1",
+            note: "Media",
+            amount: 50,
+            date: "2026-03-05",
+            recurring_frequency: "custom",
+            recurring_interval_days: 1,
+            recurring_end_date: null,
+          },
         ],
       },
       new Date("2026-03-01T00:00:00Z"),
