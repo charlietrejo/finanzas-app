@@ -6,7 +6,7 @@ import { AnimatedAmount } from "@/components/ui/animated-amount";
 import { formatMXN } from "@/lib/format";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
-import { getCurrentMonth } from "@/lib/date-utils";
+import { getCurrentMonth, formatTodayLabel } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
 import { getUpcomingPayments } from "@/lib/upcoming-payments";
 import { CalendarClock } from "lucide-react";
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-light text-ink md:text-3xl">Dashboard</h1>
-        <p className="text-sm text-slate">Resumen de tus finanzas en MXN</p>
+        <p className="text-sm text-slate">{formatTodayLabel()}</p>
       </div>
 
       <div className="flex flex-wrap gap-4">

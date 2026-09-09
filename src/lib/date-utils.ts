@@ -34,6 +34,19 @@ export function formatMonthShort(month: string): string {
   return MONTH_SHORT_FORMATTER.format(new Date(`${month}-01T00:00:00`)).replace(".", "");
 }
 
+const FULL_DATE_FORMATTER = new Intl.DateTimeFormat("es-MX", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** Fecha de hoy en español completo, ej. "Miércoles, 9 de septiembre de 2026". */
+export function formatTodayLabel(): string {
+  const label = FULL_DATE_FORMATTER.format(new Date());
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function daysBetween(a: string | Date, b: string | Date): number {
   const dateA = typeof a === "string" ? new Date(a) : a;
   const dateB = typeof b === "string" ? new Date(b) : b;
