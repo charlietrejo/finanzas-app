@@ -7,7 +7,6 @@ import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
 import { getCurrentMonth } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
-import { buildUnifiedDebts } from "@/lib/unified-debts";
 import { getUpcomingPayments } from "@/lib/upcoming-payments";
 import { CalendarClock } from "lucide-react";
 import type { Account, Budget, Debt, Transaction } from "@/types/database";
@@ -18,7 +17,7 @@ export default async function DashboardPage() {
 
   const [{ data: accounts }, { data: budgets }, { data: debts }, { data: recurringTransactions }, spentByCategory] =
     await Promise.all([
-      supabase.from("accounts").select("*").order("created_at", { ascending: true }),
+      supabase.from("accounts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
       supabase.from("budgets").select("*").eq("month", `${month}-01`),
       supabase.from("debts").select("*").is("archived_at", null),
       supabase.from("transactions").select("*").eq("is_recurring", true),
@@ -29,10 +28,9 @@ export default async function DashboardPage() {
   const totalBalance = list.reduce((sum, a) => sum + a.current_balance, 0);
 
   const debtList = (debts ?? []) as Debt[];
-  const unifiedDebts = buildUnifiedDebts(debtList, list);
-  const totalDebt = unifiedDebts.reduce((sum, d) => sum + d.current_balance, 0);
-  const creditCardDebt = unifiedDebts
-    .filter((d) => d.source === "credit_account")
+  const totalDebt = debtList.reduce((sum, d) => sum + d.current_balance, 0);
+  const creditCardDebt = debtList
+    .filter((d) => d.type === "credit_card")
     .reduce((sum, d) => sum + d.current_balance, 0);
 
   const budgetList = (budgets ?? []) as Budget[];
@@ -43,7 +41,6 @@ export default async function DashboardPage() {
 
   const upcomingPayments = getUpcomingPayments({
     debts: debtList,
-    creditAccounts: list.filter((a) => a.type === "credit"),
     recurringTransactions: (recurringTransactions ?? []) as Transaction[],
   });
 

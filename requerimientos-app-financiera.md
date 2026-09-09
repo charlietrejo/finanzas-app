@@ -29,47 +29,49 @@ Prioridad 2: Control de deudas y metas de ahorro
 Prioridad 3: Reportes y proyecciones avanzadas
 
 ### 3.1 Módulo: Cuentas
-- Alta/baja/edición de cuentas (efectivo, débito, crédito, inversión, ahorro)
+
+- Alta/baja/edición de cuentas **solo de tipo**: efectivo, débito, inversión, ahorro. **Las tarjetas de crédito NO se dan de alta como cuenta** — viven exclusivamente en el módulo de Deudas (sección 3.4)
 - Saldo inicial y saldo actual calculado
 - Todo en MXN, sin conversión de moneda
 - Al crear una cuenta bancaria, catálogo preseleccionable de bancos principales de México (ver sección 3.8) para asignar nombre/ícono, sin integración real a los bancos (solo catalogación visual)
-- Cuentas tipo crédito permiten saldo negativo hasta un `credit_limit` definido; cuentas de efectivo/débito/ahorro NO permiten saldo negativo
-- **Una cuenta tipo crédito ES la deuda de esa tarjeta — no se duplica como registro en el módulo de Deudas.** Al crear una cuenta tipo crédito, se capturan también sus datos de deuda: tasa de interés, pago mínimo del periodo actual, día de corte y día límite de pago
-- El **pago mínimo** de una tarjeta de crédito es un campo editable en cualquier momento (no fijo), porque cambia cada periodo/estado de cuenta; el usuario lo actualiza manualmente cuando le llega su nuevo estado de cuenta
-- **Las cuentas tipo crédito son seleccionables como origen al registrar un gasto**, igual que cualquier otra cuenta (efectivo, débito, etc.) — un gasto pagado con tarjeta de crédito reduce el saldo disponible de esa cuenta hasta su `credit_limit`
+- Ninguna cuenta permite saldo negativo (al no existir ya el tipo crédito, esta regla aplica de forma uniforme a todas las cuentas)
 
 ### 3.2 Módulo: Transacciones
+
 - Registro de ingresos, gastos y transferencias entre cuentas
+- **Un gasto se paga desde exactamente uno de estos dos orígenes:**
+  - una **cuenta** (efectivo, débito, inversión, ahorro), o
+  - una **tarjeta de crédito** (de Deudas) — en este caso el monto se suma directo a `current_balance` de esa deuda, sin tocar ninguna cuenta
+- Los ingresos y las transferencias entre cuentas SIEMPRE usan cuentas (nunca una tarjeta de crédito como destino de un ingreso)
 - Categorías y subcategorías personalizables
 - Catálogo precargado de negocios/comercios comunes en México (ver sección 3.8) para autocompletar el campo de comercio y sugerir categoría automáticamente
 - Etiquetas (tags) libres para filtrado cruzado
 - Transacciones recurrentes (renta, suscripciones, nómina)
 - Nota de texto libre por transacción (sin adjuntar archivos/imágenes)
-- **Regla de negocio:** no se puede registrar un gasto o transferencia si deja saldo negativo en una cuenta de efectivo/débito/ahorro (se rechaza la operación con mensaje claro); en cuentas de crédito se permite hasta el límite definido
+- **Regla de negocio (cuentas):** no se puede registrar un gasto o transferencia que deje saldo negativo en una cuenta
+- **Regla de negocio (tarjetas de crédito):** no se puede registrar un gasto con tarjeta que deje `current_balance` por encima de `credit_limit` de esa tarjeta
 
 ### 3.3 Módulo: Presupuestos
 - Presupuesto mensual por categoría
 - Alertas al superar % configurable del presupuesto (ej. 80%, 100%)
-- Comparativo presupuestado vs. real por periodo
+- Comparativo presupuestado vs. real por periodo (incluye gastos pagados con cuenta Y con tarjeta de crédito, ambos cuentan para el presupuesto de su categoría)
 
 ### 3.4 Módulo: Deudas
 
-**Este módulo combina dos fuentes de datos distintas, sin duplicar captura:**
+**Todo lo que implica una deuda vive aquí, incluidas las tarjetas de crédito:**
 
-1. **Tarjetas de crédito** — se muestran automáticamente a partir de las cuentas tipo crédito (sección 3.1). La deuda es, en tiempo real, `credit_limit - saldo_disponible` de esa cuenta. No se capturan por separado aquí; solo se leen. Editar tasa de interés, pago mínimo o fechas de corte/pago se hace desde la cuenta misma (sección 3.1), no desde este módulo
-2. **Préstamos y deudas personales** (con alguien, no con un banco) — estos SÍ se capturan manualmente aquí porque no son una cuenta desde la que se paguen gastos del día a día
-
-**Funciones del módulo (aplican a ambas fuentes combinadas en una sola vista):**
+- **Tarjetas de crédito**: nombre, banco (catálogo de sección 3.8), `credit_limit`, `current_balance` (aumenta con cada gasto pagado con esa tarjeta, disminuye con cada pago), tasa de interés, pago mínimo del periodo actual, día de corte, día límite de pago
+- **Préstamos**: monto principal, tasa de interés, pago mínimo, fecha de pago, saldo actual
+- **Deudas personales** (con alguien, no con un banco): monto, con quién, fecha de pago, saldo actual
+- El **pago mínimo** de una tarjeta de crédito es un campo editable en cualquier momento (no fijo), porque cambia cada periodo/estado de cuenta; el usuario lo actualiza manualmente cuando le llega su nuevo estado de cuenta
 - Simulador de amortización (tabla de pagos) para préstamos y para tarjetas de crédito
 - Estrategias de pago (bola de nieve / avalancha) considerando el total de deudas (tarjetas + préstamos + personales)
-- Pago de deuda desde una cuenta (ej. nómina):
-  - Si es una **tarjeta de crédito**: el pago es en realidad una transferencia entre cuentas (de la cuenta origen hacia la cuenta de crédito), que reduce el saldo usado de la tarjeta — no requiere una tabla `debt_payments` separada, es una `transaction` tipo transferencia
-  - Si es un **préstamo/deuda personal**: descuenta el saldo de la cuenta origen y reduce `current_balance` en `debts`, registrado en `debt_payments`, en la misma operación atómica
+- **Pago de una deuda** (cualquier tipo, incluida tarjeta de crédito) desde una cuenta (ej. nómina): descuenta el saldo de la cuenta origen y reduce `current_balance` de la deuda, registrado en `debt_payments`, en la misma operación atómica
 
 ### 3.4.1 Módulo: Dashboard — Alertas de próximos pagos
 - Zona visible en el Dashboard (pantalla principal) que lista los próximos pagos a vencer, ordenados por fecha, combinando:
-  - Tarjetas de crédito: próxima fecha límite de pago (`payment_due_day`) y su pago mínimo actual
-  - Préstamos/deudas personales: próxima fecha de pago (`due_day`) de `debts`
+  - Tarjetas de crédito: próxima fecha límite de pago y su pago mínimo actual
+  - Préstamos/deudas personales: próxima fecha de pago
   - Transacciones recurrentes próximas a ejecutarse (ej. renta, suscripciones)
 - Ventana configurable de "próximos N días" (default: 7 días)
 - Indicador visual de urgencia (ej. rojo si vence en ≤2 días, ámbar si ≤7 días)
@@ -80,11 +82,11 @@ Prioridad 3: Reportes y proyecciones avanzadas
 - Barra de progreso y proyección de cumplimiento según ritmo actual
 
 ### 3.6 Módulo: Reportes y proyecciones (prioridad marcada)
-- Flujo de efectivo mensual/anual (ingresos vs egresos)
+- Flujo de efectivo mensual/anual (ingresos vs egresos, incluyendo gastos pagados con tarjeta de crédito)
 - Distribución de gastos por categoría (pie/bar chart)
 - Tendencia histórica (línea de tiempo, 6-12-24 meses)
 - Proyección de balance futuro basada en promedio de meses anteriores
-- Patrimonio neto (activos - deudas) a lo largo del tiempo
+- Patrimonio neto (saldo de cuentas - deudas totales, incluidas tarjetas) a lo largo del tiempo
 - Exportar reportes a PDF/CSV
 
 ### 3.7 Módulo: Configuración
@@ -94,7 +96,7 @@ Prioridad 3: Reportes y proyecciones avanzadas
 
 ### 3.8 Catálogos precargados (México)
 
-**Bancos principales** (para nombrar/iconografiar cuentas, sin integración real):
+**Bancos principales** (para nombrar/iconografiar cuentas y tarjetas, sin integración real):
 BBVA, Santander, Banorte, Citibanamex, HSBC, Scotiabank, Inbursa, Banco Azteca, BanBajío, Banregio, Banco del Bienestar, Nu México, Klar, Hey Banco (Banregio).
 
 **Negocios/comercios comunes** (para autocompletar y sugerir categoría):
@@ -116,19 +118,13 @@ Comida y supermercado, Restaurantes y antojos, Transporte, Vivienda (renta/hipot
 
 El campo de categoría en el formulario de transacciones debe listar estas categorías por defecto desde el primer uso — dejar el movimiento "sin categoría" debe ser una opción explícita más, no la única disponible.
 
-## 4. Modelo de datos (borrador inicial — Postgres/Supabase)
+## 4. Modelo de datos (Postgres/Supabase)
 
 ```
 users (manejado por Supabase Auth)
 
-accounts
-  id, user_id, name, type, bank_name (nullable), initial_balance,
-  credit_limit (nullable, solo type=credit),
-  interest_rate (nullable, solo type=credit),
-  minimum_payment (nullable, solo type=credit — editable por el usuario cada periodo),
-  cutoff_day (nullable, solo type=credit — día de corte del estado de cuenta),
-  payment_due_day (nullable, solo type=credit — día límite de pago),
-  created_at
+accounts (SOLO efectivo, débito, inversión, ahorro — NUNCA tarjeta de crédito)
+  id, user_id, name, type, bank_name (nullable), initial_balance, created_at
 
 categories
   id, user_id, name, parent_id (nullable), type (income/expense), icon, color
@@ -137,16 +133,24 @@ merchants (catálogo, no ligado a user_id — dato de referencia compartido)
   id, name, default_category_id (nullable)
 
 transactions
-  id, user_id, account_id, category_id, merchant_id (nullable), type (income/expense/transfer),
+  id, user_id, account_id (nullable), debt_id (nullable — solo cuando type=expense
+    y se paga con tarjeta de crédito; en ese caso account_id es NULL),
+  category_id, merchant_id (nullable), type (income/expense/transfer),
   amount, date, note, is_recurring, recurring_rule, created_at
+  -- regla: exactamente uno de account_id / debt_id debe estar definido en un gasto;
+  -- income y transfer siempre usan account_id (nunca debt_id)
 
 budgets
   id, user_id, category_id, month, amount_limit, alert_threshold_pct
 
-debts (SOLO préstamos y deudas personales — las tarjetas de crédito viven en `accounts`, no aquí)
-  id, user_id, name, type (loan/personal), principal, interest_rate, minimum_payment,
-  due_day, current_balance, archived_at (nullable — se usa para registros antiguos de
-  tarjeta que ya no se muestran activos, sin borrarlos), created_at
+debts (incluye tarjetas de crédito, préstamos y deudas personales)
+  id, user_id, name, type (credit_card/loan/personal),
+  credit_limit (nullable, solo type=credit_card),
+  bank_name (nullable, solo type=credit_card — catálogo de bancos),
+  interest_rate, minimum_payment (editable cada periodo, sobre todo credit_card),
+  due_day (préstamo/personal) / cutoff_day y payment_due_day (nullable, solo credit_card),
+  current_balance (aumenta con gastos pagados con esta deuda, disminuye con pagos),
+  created_at
 
 debt_payments
   id, debt_id, account_id, amount, date, note
@@ -166,27 +170,28 @@ Row Level Security: todas las tablas con `user_id` filtradas por `user_id = auth
 - Instalable como PWA en el iPhone ("Agregar a pantalla de inicio"), con ícono y modo pantalla completa
 - Funcionamiento offline básico vía Service Worker (cache de assets y última data cargada); sincronización al recuperar conexión, no en tiempo real
 - Seguridad: RLS en Supabase + autenticación obligatoria
-- **Atomicidad de transacciones**: operaciones que afectan más de una tabla o más de una cuenta (transferencias entre cuentas, aportación a meta que descuenta de una cuenta, pago de deuda que registra en `debt_payments`, actualiza `current_balance` de la deuda y descuenta el saldo de la cuenta de origen) deben ejecutarse como transacciones atómicas de Postgres (funciones RPC de Supabase con `BEGIN/COMMIT` implícito), nunca como escrituras separadas desde el cliente
-- **Validación de saldo**: la restricción de "no saldo negativo" en cuentas no crédito debe validarse a nivel de base de datos (constraint o función RPC), no solo en el frontend, para evitar inconsistencias
+- **Atomicidad de transacciones**: operaciones que afectan más de una tabla (transferencias entre cuentas, aportación a meta que descuenta de una cuenta, gasto pagado con tarjeta que actualiza `current_balance` de la deuda, pago de deuda que registra en `debt_payments` y descuenta el saldo de la cuenta de origen) deben ejecutarse como transacciones atómicas de Postgres (funciones RPC de Supabase con `BEGIN/COMMIT` implícito), nunca como escrituras separadas desde el cliente
+- **Validación de saldo/límite**: la restricción de "no saldo negativo" en cuentas y la de "no exceder `credit_limit`" en tarjetas deben validarse a nivel de base de datos (constraint o función RPC), no solo en el frontend, para evitar inconsistencias
 - Costo: $0 en todos los servicios mientras se mantenga dentro de límites de free tier
 - Sin necesidad de Mac, Xcode ni cuenta de Apple Developer
 
-## 6. Corrección de diseño: tarjetas de crédito (post-Fase 3)
+## 6. Historial de corrección de diseño: tarjetas de crédito
 
-Se detectó que el diseño original trataba "cuenta de tarjeta de crédito" y "deuda de tarjeta de crédito" como dos entidades separadas, causando que no se sincronizaran entre sí y que no se pudiera pagar gastos con tarjeta de crédito. La corrección aplicada en este documento (secciones 3.1, 3.4, 3.4.1 y el modelo de datos) es:
+Este punto pasó por dos iteraciones antes de llegar al modelo final (sección 3.1/3.2/3.4 y el modelo de datos arriba ya reflejan la versión final; esta sección documenta el porqué, para referencia):
 
-1. Las tarjetas de crédito son únicamente `accounts` tipo `credit` (con sus campos de interés/pago mínimo/fechas); ya no existen como registro duplicado en `debts`
-2. `debts` queda reservada solo para préstamos y deudas personales
-3. Las cuentas tipo crédito deben ser seleccionables al registrar un gasto
-4. Se agrega el módulo de alertas de próximos pagos en el Dashboard (3.4.1)
+1. **Diseño original**: tarjeta de crédito como registro duplicado en `debts`, sin relación con `accounts`. Problema: no se podía pagar un gasto con tarjeta de crédito.
+2. **Primer intento de corrección**: mover la tarjeta de crédito a `accounts` (tipo `credit`) y eliminar el duplicado en `debts`. Problema: causó confusión de UX y discrepancias entre el saldo mostrado y la deuda real al usarse en paralelo con datos ya capturados.
+3. **Diseño final (vigente)**: `accounts` **nunca** incluye tarjetas de crédito — solo efectivo, débito, inversión, ahorro. Las tarjetas de crédito viven completa y únicamente en `debts`, y un gasto puede pagarse tomando como origen una cuenta O una tarjeta de crédito directamente (campo `debt_id` en `transactions`), sin pasar por `accounts` en ese segundo caso.
 
-**Tareas de migración/corrección para Claude Code:**
-- Agregar las columnas nuevas a `accounts` (interest_rate, minimum_payment, cutoff_day, payment_due_day)
-- Agregar la columna `archived_at` a `debts`
-- Para cada registro existente de `debts` con type=tarjeta: copiar sus valores (interest_rate, minimum_payment, fechas) hacia la cuenta de crédito correspondiente, y marcarlo con `archived_at = now()` en vez de borrarlo, para no perder el dato histórico real capturado
-- Corregir el selector de cuentas en el formulario de gastos para incluir cuentas tipo crédito
-- Actualizar la vista de Deudas para combinar ambas fuentes (accounts tipo crédito + registros activos de debts, es decir con `archived_at IS NULL`) en una sola lista
-- Construir la zona de alertas de próximos pagos en el Dashboard
+**Tareas de migración para Claude Code (de la iteración 2 a la final):**
+- Quitar el tipo `credit` de `accounts` (o impedir que se sigan creando cuentas de ese tipo)
+- Quitar las columnas `credit_limit`, `interest_rate`, `minimum_payment`, `cutoff_day`, `payment_due_day` de `accounts` si ya se habían agregado ahí
+- Agregar esas mismas columnas a `debts` (ver modelo de datos, sección 4), junto con `bank_name`
+- Para cada cuenta existente tipo `credit`: crear su registro correspondiente en `debts` (type=credit_card) con los valores capturados (saldo usado como `current_balance`, límite, tasa, pago mínimo, fechas), y **archivar la cuenta** (agregar `archived_at` a `accounts` si no existe, marcarla en vez de borrarla) para no perder el dato real ya capturado
+- Agregar la columna `debt_id` (nullable) a `transactions`; para cada transacción de gasto que haya quedado ligada a una cuenta que en realidad era tarjeta de crédito, reasignarla al `debt_id` correspondiente y limpiar su `account_id`
+- Actualizar el formulario de gastos para que el selector de "pagar con" muestre cuentas Y tarjetas de crédito (de `debts`) como opciones de un mismo picker, marcando cuál es cuál
+- Actualizar la vista de Deudas para mostrar tarjetas, préstamos y deudas personales juntos
+- Construir la zona de alertas de próximos pagos en el Dashboard (sección 3.4.1)
 
 ## 7. Fases sugeridas de desarrollo
 
@@ -197,13 +202,14 @@ Se detectó que el diseño original trataba "cuenta de tarjeta de crédito" y "d
 5. **Fase 5 — PWA y pulido**: instalación en iPhone, offline cache, ajustes mobile-first finales
 6. **Fase 6 — Auditoría de seguridad y atomización**: revisión de políticas RLS por tabla, conversión de operaciones multi-tabla a funciones RPC atómicas, revisión de manejo de sesión/tokens de Supabase Auth, pruebas de que un usuario no pueda leer/escribir datos de otro usuario
 7. **Fase 7 — Pruebas**: casos de prueba automatizados y manuales, entre ellos:
-   - No se puede registrar un gasto que deje saldo negativo en una cuenta de efectivo/débito/ahorro
-   - Sí se puede registrar un gasto en cuenta de crédito hasta el `credit_limit`, y se rechaza al superarlo
-   - Un pago de deuda desde la cuenta de nómina descuenta correctamente el saldo de la cuenta Y actualiza `current_balance` de la deuda en la misma operación (si una falla, ambas se revierten)
+   - No se puede registrar un gasto que deje saldo negativo en una cuenta
+   - Sí se puede registrar un gasto con tarjeta de crédito hasta el `credit_limit`, y se rechaza al superarlo
+   - Un pago de deuda (tarjeta, préstamo o personal) desde una cuenta descuenta correctamente el saldo de la cuenta Y actualiza `current_balance` de la deuda en la misma operación (si una falla, ambas se revierten)
+   - Un gasto pagado con tarjeta de crédito aumenta correctamente `current_balance` de esa tarjeta, sin tocar ninguna cuenta
    - Transferencia entre cuentas: si la cuenta origen no tiene fondos suficientes, se rechaza sin afectar la cuenta destino
    - Aportación a meta de ahorro descuenta correctamente de la cuenta de origen
    - Pruebas de RLS: un usuario no puede ver ni modificar cuentas/transacciones/deudas de otro usuario
-   - Pruebas de reportes: los totales de flujo de efectivo y patrimonio neto cuadran contra la suma manual de transacciones de prueba
+   - Pruebas de reportes: los totales de flujo de efectivo y patrimonio neto cuadran contra la suma manual de transacciones de prueba (incluyendo gastos con tarjeta)
 
 ## 8. Diseño visual
 

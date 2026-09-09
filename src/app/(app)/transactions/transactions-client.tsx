@@ -14,12 +14,13 @@ import {
   createCategory,
   type ActionState,
 } from "./actions";
-import type { Account, Category, Merchant, TransactionType } from "@/types/database";
+import type { Account, Category, Debt, Merchant, TransactionType } from "@/types/database";
 import type { TransactionRow } from "./page";
 
 interface Props {
   transactions: TransactionRow[];
   accounts: Account[];
+  creditCards: Debt[];
   categories: Category[];
   merchants: Merchant[];
 }
@@ -36,14 +37,14 @@ const TYPE_BADGE_TONE: Record<TransactionType, "success" | "danger" | "info"> = 
   transfer: "info",
 };
 
-export function TransactionsClient({ transactions, accounts, categories: initialCategories, merchants }: Props) {
+export function TransactionsClient({ transactions, accounts, creditCards, categories: initialCategories, merchants }: Props) {
   const [categories, setCategories] = useState(initialCategories);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const addCategory = (category: Category) => setCategories((prev) => [...prev, category]);
 
-  if (accounts.length === 0) {
+  if (accounts.length === 0 && creditCards.length === 0) {
     return (
       <div className="flex flex-col gap-6">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Movimientos</h1>
@@ -74,6 +75,7 @@ export function TransactionsClient({ transactions, accounts, categories: initial
       {creating && (
         <TransactionForm
           accounts={accounts}
+          creditCards={creditCards}
           categories={categories}
           merchants={merchants}
           onAddCategory={addCategory}
@@ -92,6 +94,7 @@ export function TransactionsClient({ transactions, accounts, categories: initial
               <TransactionForm
                 key={t.id}
                 accounts={accounts}
+                creditCards={creditCards}
                 categories={categories}
                 merchants={merchants}
                 transaction={t}
@@ -114,7 +117,7 @@ export function TransactionsClient({ transactions, accounts, categories: initial
                     {t.merchant?.name ?? t.category?.name ?? TYPE_LABELS[t.type]}
                   </p>
                   <p className="truncate text-xs text-slate">
-                    {t.account?.name}
+                    {t.account?.name ?? (t.debt ? `${t.debt.name} (tarjeta)` : "")}
                     {t.type === "transfer" && t.to_account ? ` → ${t.to_account.name}` : ""}
                     {t.category?.name && t.merchant?.name ? ` · ${t.category.name}` : ""}
                     {t.note ? ` · ${t.note}` : ""}
@@ -170,6 +173,7 @@ function DeleteTransactionButton({ id }: { id: string }) {
 
 function TransactionForm({
   accounts,
+  creditCards,
   categories,
   merchants,
   transaction,
@@ -177,6 +181,7 @@ function TransactionForm({
   onDone,
 }: {
   accounts: Account[];
+  creditCards: Debt[];
   categories: Category[];
   merchants: Merchant[];
   transaction?: TransactionRow;
@@ -185,6 +190,17 @@ function TransactionForm({
 }) {
   const isEdit = !!transaction;
   const [type, setType] = useState<TransactionType>(transaction?.type ?? "expense");
+  const payWithOptions = useMemo(() => {
+    const accountOpts = accounts.map((a) => ({ value: `account:${a.id}`, label: a.name }));
+    if (type !== "expense") return accountOpts;
+    const cardOpts = creditCards.map((d) => ({ value: `debt:${d.id}`, label: `${d.name} (tarjeta)` }));
+    return [...accountOpts, ...cardOpts];
+  }, [accounts, creditCards, type]);
+  const defaultPayWith = transaction?.debt_id
+    ? `debt:${transaction.debt_id}`
+    : transaction?.account_id
+      ? `account:${transaction.account_id}`
+      : payWithOptions[0]?.value;
   const [merchantQuery, setMerchantQuery] = useState(transaction?.merchant?.name ?? "");
   const [merchantId, setMerchantId] = useState<string>(transaction?.merchant_id ?? "");
   const [categoryId, setCategoryId] = useState<string>(transaction?.category_id ?? "");
@@ -270,11 +286,13 @@ function TransactionForm({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="account_id">{type === "transfer" ? "Cuenta origen" : "Cuenta"}</Label>
-            <Select id="account_id" name="account_id" required defaultValue={transaction?.account_id ?? accounts[0]?.id}>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
+            <Label htmlFor="pay_with">
+              {type === "transfer" ? "Cuenta origen" : type === "expense" ? "Pagar con" : "Cuenta"}
+            </Label>
+            <Select id="pay_with" name="pay_with" required defaultValue={defaultPayWith}>
+              {payWithOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </Select>

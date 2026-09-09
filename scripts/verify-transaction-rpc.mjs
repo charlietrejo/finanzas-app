@@ -29,6 +29,7 @@ const supabase = createClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANO
 let pass = 0;
 let fail = 0;
 const createdAccountIds = [];
+const createdDebtIds = [];
 
 function check(label, condition) {
   if (condition) {
@@ -67,6 +68,33 @@ async function getAccount(id) {
   return data;
 }
 
+async function createDebt(overrides) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("debts")
+    .insert({
+      user_id: user.id,
+      name: "verify-script",
+      type: "credit_card",
+      principal: 0,
+      current_balance: 0,
+      ...overrides,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  createdDebtIds.push(data.id);
+  return data;
+}
+
+async function getDebt(id) {
+  const { data, error } = await supabase.from("debts").select("*").eq("id", id).single();
+  if (error) throw error;
+  return data;
+}
+
 async function main() {
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email: TEST_USER_EMAIL,
@@ -88,30 +116,39 @@ async function main() {
   check("rechaza gasto que deja saldo negativo", !!overdraftError);
   check("saldo de la cuenta no cambió", (await getAccount(debit.id)).current_balance === 100);
 
-  console.log("\n2) Cuenta crédito permite hasta el credit_limit");
-  const credit = await createAccount({
-    name: "Crédito prueba",
-    type: "credit",
-    initial_balance: 0,
-    current_balance: 0,
-    credit_limit: 500,
-  });
+  console.log("\n2) Tarjeta de crédito (debts) permite hasta el credit_limit, pagada directamente con debt_id");
+  const card = await createDebt({ name: "Tarjeta prueba", credit_limit: 500 });
   const { error: withinLimitError } = await supabase.rpc("create_transaction", {
-    p_account_id: credit.id,
+    p_debt_id: card.id,
+    p_account_id: null,
     p_type: "expense",
     p_amount: 500,
     p_date: new Date().toISOString().slice(0, 10),
   });
   check("acepta gasto igual al límite de crédito", !withinLimitError);
-  check("saldo llega a -500", (await getAccount(credit.id)).current_balance === "-500.00" || (await getAccount(credit.id)).current_balance === -500);
+  const cardAfterCharge = await getDebt(card.id);
+  check(
+    "current_balance de la tarjeta sube a 500 (sin tocar ninguna cuenta)",
+    cardAfterCharge.current_balance === "500.00" || cardAfterCharge.current_balance === 500
+  );
 
   const { error: overLimitError } = await supabase.rpc("create_transaction", {
-    p_account_id: credit.id,
+    p_debt_id: card.id,
+    p_account_id: null,
     p_type: "expense",
     p_amount: 1,
     p_date: new Date().toISOString().slice(0, 10),
   });
   check("rechaza gasto que excede el límite de crédito", !!overLimitError);
+
+  const { error: bothError } = await supabase.rpc("create_transaction", {
+    p_debt_id: card.id,
+    p_account_id: (await createAccount({ name: "Ambos prueba", type: "debit", initial_balance: 100, current_balance: 100 })).id,
+    p_type: "expense",
+    p_amount: 1,
+    p_date: new Date().toISOString().slice(0, 10),
+  });
+  check("rechaza un gasto que da cuenta Y tarjeta a la vez", !!bothError);
 
   console.log("\n3) Transferencia atómica con fondos insuficientes se rechaza sin afectar destino");
   const origin = await createAccount({ name: "Origen prueba", type: "debit", initial_balance: 50, current_balance: 50 });
@@ -146,8 +183,9 @@ async function main() {
     check("cuenta destino vuelve a 20", (await getAccount(destination.id)).current_balance === 20);
   }
 
-  console.log("\nLimpiando cuentas de prueba...");
+  console.log("\nLimpiando cuentas y deudas de prueba...");
   await supabase.from("accounts").delete().in("id", createdAccountIds);
+  await supabase.from("debts").delete().in("id", createdDebtIds);
 
   console.log(`\n${pass} pruebas OK, ${fail} fallidas.`);
   process.exit(fail > 0 ? 1 : 0);

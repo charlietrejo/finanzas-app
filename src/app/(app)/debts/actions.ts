@@ -14,6 +14,10 @@ export async function createDebt(_prev: ActionState, formData: FormData): Promis
     interest_rate: formData.get("interest_rate"),
     minimum_payment: formData.get("minimum_payment"),
     due_day: formData.get("due_day") || null,
+    credit_limit: formData.get("credit_limit") || null,
+    bank_name: formData.get("bank_name") || null,
+    cutoff_day: formData.get("cutoff_day") || null,
+    payment_due_day: formData.get("payment_due_day") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
@@ -25,6 +29,7 @@ export async function createDebt(_prev: ActionState, formData: FormData): Promis
   } = await supabase.auth.getUser();
   if (!user) return { error: "No autenticado" };
 
+  const isCreditCard = parsed.data.type === "credit_card";
   const { error } = await supabase.from("debts").insert({
     user_id: user.id,
     name: parsed.data.name,
@@ -33,7 +38,11 @@ export async function createDebt(_prev: ActionState, formData: FormData): Promis
     current_balance: parsed.data.principal,
     interest_rate: parsed.data.interest_rate,
     minimum_payment: parsed.data.minimum_payment,
-    due_day: parsed.data.due_day ?? null,
+    due_day: isCreditCard ? null : parsed.data.due_day ?? null,
+    credit_limit: isCreditCard ? parsed.data.credit_limit ?? null : null,
+    bank_name: isCreditCard ? parsed.data.bank_name ?? null : null,
+    cutoff_day: isCreditCard ? parsed.data.cutoff_day ?? null : null,
+    payment_due_day: isCreditCard ? parsed.data.payment_due_day ?? null : null,
   });
 
   if (error) {
@@ -51,19 +60,30 @@ export async function updateDebt(id: string, _prev: ActionState, formData: FormD
     interest_rate: formData.get("interest_rate"),
     minimum_payment: formData.get("minimum_payment"),
     due_day: formData.get("due_day") || null,
+    credit_limit: formData.get("credit_limit") || null,
+    bank_name: formData.get("bank_name") || null,
+    cutoff_day: formData.get("cutoff_day") || null,
+    payment_due_day: formData.get("payment_due_day") || null,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
   const supabase = await createClient();
+  const { data: existing } = await supabase.from("debts").select("type").eq("id", id).single();
+  const isCreditCard = existing?.type === "credit_card";
+
   const { error } = await supabase
     .from("debts")
     .update({
       name: parsed.data.name,
       interest_rate: parsed.data.interest_rate,
       minimum_payment: parsed.data.minimum_payment,
-      due_day: parsed.data.due_day ?? null,
+      due_day: isCreditCard ? null : parsed.data.due_day ?? null,
+      credit_limit: isCreditCard ? parsed.data.credit_limit ?? null : null,
+      bank_name: isCreditCard ? parsed.data.bank_name ?? null : null,
+      cutoff_day: isCreditCard ? parsed.data.cutoff_day ?? null : null,
+      payment_due_day: isCreditCard ? parsed.data.payment_due_day ?? null : null,
     })
     .eq("id", id);
 
@@ -84,6 +104,7 @@ export async function deleteDebt(id: string) {
   }
   revalidatePath("/debts");
   revalidatePath("/dashboard");
+  revalidatePath("/transactions");
   return null;
 }
 

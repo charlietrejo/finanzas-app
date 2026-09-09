@@ -7,10 +7,18 @@ import type { RecurringRule } from "@/types/database";
 
 export type ActionState = { error?: string } | null;
 
+function splitPayWith(value: FormDataEntryValue | null): { account_id: string | null; debt_id: string | null } {
+  if (typeof value !== "string" || !value.includes(":")) return { account_id: null, debt_id: null };
+  const [kind, id] = value.split(":");
+  return kind === "debt" ? { account_id: null, debt_id: id } : { account_id: id, debt_id: null };
+}
+
 function parseFormData(formData: FormData) {
+  const { account_id, debt_id } = splitPayWith(formData.get("pay_with"));
   return transactionFormSchema.safeParse({
     type: formData.get("type"),
-    account_id: formData.get("account_id"),
+    account_id,
+    debt_id,
     to_account_id: formData.get("to_account_id") || null,
     category_id: formData.get("category_id") || null,
     merchant_id: formData.get("merchant_id") || null,
@@ -44,7 +52,8 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_transaction", {
-    p_account_id: d.account_id,
+    p_account_id: d.account_id ?? null,
+    p_debt_id: d.debt_id ?? null,
     p_type: d.type,
     p_amount: d.amount,
     p_date: d.date,
@@ -64,6 +73,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");
+  revalidatePath("/debts");
   return null;
 }
 
@@ -81,7 +91,8 @@ export async function updateTransaction(
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_transaction", {
     p_id: id,
-    p_account_id: d.account_id,
+    p_account_id: d.account_id ?? null,
+    p_debt_id: d.debt_id ?? null,
     p_type: d.type,
     p_amount: d.amount,
     p_date: d.date,
@@ -101,6 +112,7 @@ export async function updateTransaction(
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");
+  revalidatePath("/debts");
   return null;
 }
 
@@ -113,6 +125,7 @@ export async function deleteTransaction(id: string) {
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");
+  revalidatePath("/debts");
   return null;
 }
 

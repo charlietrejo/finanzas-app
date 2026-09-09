@@ -8,4 +8,7 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   savings: "Ahorro",
 };
 
-export const ACCOUNT_TYPES: AccountType[] = ["cash", "debit", "credit", "investment", "savings"];
+// "credit" ya no es creable (sección 6 del doc: las tarjetas viven en
+// `debts`) — se conserva solo en ACCOUNT_TYPE_LABELS por si hiciera falta
+// mostrar el tipo de una cuenta archivada.
+export const ACCOUNT_TYPES: AccountType[] = ["cash", "debit", "investment", "savings"];

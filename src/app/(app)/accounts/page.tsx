@@ -7,6 +7,7 @@ export default async function AccountsPage() {
   const { data } = await supabase
     .from("accounts")
     .select("*")
+    .is("archived_at", null)
     .order("created_at", { ascending: true });
 
   return <AccountsClient accounts={(data ?? []) as Account[]} />;

@@ -1,8 +1,8 @@
+// "credit" se conserva solo para leer cuentas archivadas (legacy, ver
+// 017_credit_cards_back_to_debts.sql) — ya no se ofrece al crear una cuenta.
 export type AccountType = "cash" | "debit" | "credit" | "investment" | "savings";
 export type CategoryType = "income" | "expense";
 export type TransactionType = "income" | "expense" | "transfer";
-// "credit_card" se conserva solo para leer deudas archivadas (legacy, ver
-// 016_credit_card_account_fields.sql) — ya no se ofrece al crear una deuda.
 export type DebtType = "credit_card" | "loan" | "personal";
 
 // Nota: se usan `type` (no `interface`) porque los Row de la tabla deben ser
@@ -22,13 +22,10 @@ export type Account = {
   bank_name: string | null;
   initial_balance: number;
   current_balance: number;
-  credit_limit: number | null;
-  // Datos de deuda de la tarjeta (solo type="credit"; sección 6 del doc: una
-  // cuenta de crédito ES la deuda, no se duplica en `debts`).
-  interest_rate: number | null;
-  minimum_payment: number | null;
-  cutoff_day: number | null;
-  payment_due_day: number | null;
+  // No nulo = cuenta archivada (ej. tarjeta migrada a `debts`, sección 6 del
+  // doc): se conserva el saldo histórico, pero ya no se muestra activa ni
+  // se pueden crear cuentas nuevas type="credit".
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -68,10 +65,15 @@ export type Debt = {
   principal: number;
   interest_rate: number;
   minimum_payment: number;
+  // due_day: préstamo/personal. credit_limit/bank_name/cutoff_day/payment_due_day:
+  // solo type="credit_card" (sección 6 del doc: las tarjetas viven completa
+  // y únicamente aquí, nunca en `accounts`). Mutuamente excluyentes con due_day.
   due_day: number | null;
+  credit_limit: number | null;
+  bank_name: string | null;
+  cutoff_day: number | null;
+  payment_due_day: number | null;
   current_balance: number;
-  // No nulo = deuda archivada (ej. tarjeta migrada a `accounts`): se
-  // conserva el histórico, pero ya no se muestra activa. Ver sección 6.
   archived_at: string | null;
   created_at: string;
 };
@@ -112,7 +114,10 @@ export type GoalContribution = {
 export type Transaction = {
   id: string;
   user_id: string;
-  account_id: string;
+  // Exactamente uno de account_id/debt_id en un gasto (pagado con cuenta O
+  // con tarjeta directamente); income/transfer siempre usan account_id.
+  account_id: string | null;
+  debt_id: string | null;
   to_account_id: string | null;
   category_id: string | null;
   merchant_id: string | null;
@@ -131,18 +136,12 @@ export interface Database {
     Tables: {
       accounts: {
         Row: Account;
-        Insert: Omit<
-          Account,
-          "id" | "user_id" | "created_at" | "current_balance" | "interest_rate" | "minimum_payment" | "cutoff_day" | "payment_due_day"
-        > & {
+        Insert: Omit<Account, "id" | "user_id" | "created_at" | "current_balance" | "archived_at"> & {
           id?: string;
           user_id?: string;
           created_at?: string;
           current_balance?: number;
-          interest_rate?: number | null;
-          minimum_payment?: number | null;
-          cutoff_day?: number | null;
-          payment_due_day?: number | null;
+          archived_at?: string | null;
         };
         Update: Partial<Omit<Account, "id" | "user_id">>;
         Relationships: [];
@@ -193,12 +192,28 @@ export interface Database {
       };
       debts: {
         Row: Debt;
-        Insert: Omit<Debt, "id" | "user_id" | "created_at" | "current_balance" | "due_day" | "archived_at"> & {
+        Insert: Omit<
+          Debt,
+          | "id"
+          | "user_id"
+          | "created_at"
+          | "current_balance"
+          | "due_day"
+          | "credit_limit"
+          | "bank_name"
+          | "cutoff_day"
+          | "payment_due_day"
+          | "archived_at"
+        > & {
           id?: string;
           user_id?: string;
           created_at?: string;
           current_balance?: number;
           due_day?: number | null;
+          credit_limit?: number | null;
+          bank_name?: string | null;
+          cutoff_day?: number | null;
+          payment_due_day?: number | null;
           archived_at?: string | null;
         };
         Update: Partial<Omit<Debt, "id" | "user_id">>;
@@ -245,7 +260,7 @@ export interface Database {
     Functions: {
       create_transaction: {
         Args: {
-          p_account_id: string;
+          p_account_id: string | null;
           p_type: TransactionType;
           p_amount: number;
           p_date: string;
@@ -256,13 +271,14 @@ export interface Database {
           p_tags?: string[];
           p_is_recurring?: boolean;
           p_recurring_rule?: RecurringRule | null;
+          p_debt_id?: string | null;
         };
         Returns: Transaction;
       };
       update_transaction: {
         Args: {
           p_id: string;
-          p_account_id: string;
+          p_account_id: string | null;
           p_type: TransactionType;
           p_amount: number;
           p_date: string;
@@ -273,6 +289,7 @@ export interface Database {
           p_tags?: string[];
           p_is_recurring?: boolean;
           p_recurring_rule?: RecurringRule | null;
+          p_debt_id?: string | null;
         };
         Returns: Transaction;
       };

@@ -94,15 +94,10 @@ function toUpcoming(
 interface DebtLike {
   id: string;
   name: string;
+  type: string;
   due_day: number | null;
-  minimum_payment?: number;
-}
-
-interface CreditAccountLike {
-  id: string;
-  name: string;
   payment_due_day: number | null;
-  minimum_payment: number | null;
+  minimum_payment?: number;
 }
 
 interface RecurringTransactionLike {
@@ -114,44 +109,31 @@ interface RecurringTransactionLike {
 
 /**
  * Zona de alertas de próximos pagos del Dashboard (sección 3.4.1): unifica
- * tres fuentes de vencimientos — deudas personales, cuentas de crédito y
- * transacciones recurrentes — en una sola lista ordenada por cercanía.
+ * dos fuentes de vencimientos — deudas (préstamos/personales por `due_day`,
+ * tarjetas por `payment_due_day`, ambas viven en `debts`) y transacciones
+ * recurrentes — en una sola lista ordenada por cercanía.
  */
 export function getUpcomingPayments(
   input: {
     debts?: DebtLike[];
-    creditAccounts?: CreditAccountLike[];
     recurringTransactions?: RecurringTransactionLike[];
   },
   today: Date = new Date(),
   withinDays: number = 7
 ): UpcomingPayment[] {
-  const { debts = [], creditAccounts = [], recurringTransactions = [] } = input;
+  const { debts = [], recurringTransactions = [] } = input;
   const upcoming: UpcomingPayment[] = [];
 
   for (const debt of debts) {
-    if (!debt.due_day) continue;
+    const dueDay = debt.due_day ?? debt.payment_due_day;
+    if (!dueDay) continue;
     upcoming.push(
       toUpcoming(
         `debt:${debt.id}`,
-        "debt",
+        debt.type === "credit_card" ? "credit_account" : "debt",
         debt.name,
         debt.minimum_payment ?? null,
-        nextMonthlyDueDate(debt.due_day, today),
-        today
-      )
-    );
-  }
-
-  for (const account of creditAccounts) {
-    if (!account.payment_due_day) continue;
-    upcoming.push(
-      toUpcoming(
-        `credit_account:${account.id}`,
-        "credit_account",
-        account.name,
-        account.minimum_payment,
-        nextMonthlyDueDate(account.payment_due_day, today),
+        nextMonthlyDueDate(dueDay, today),
         today
       )
     );
