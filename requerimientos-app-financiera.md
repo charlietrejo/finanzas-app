@@ -224,6 +224,16 @@ Este punto pasó por dos iteraciones antes de llegar al modelo final (sección 3
    - Aportación a meta de ahorro descuenta correctamente de la cuenta de origen
    - Pruebas de RLS: un usuario no puede ver ni modificar cuentas/transacciones/deudas de otro usuario
    - Pruebas de reportes: los totales de flujo de efectivo y patrimonio neto cuadran contra la suma manual de transacciones de prueba (incluyendo gastos con tarjeta)
+8. **Fase 8 — Motor de recurrencias automáticas**: hoy `recurring_frequency`/`recurring_end_date` solo son metadatos; nada genera la transacción del siguiente periodo automáticamente. Implementación:
+   - Agregar columna `next_occurrence_date` a `transactions` (solo relevante cuando `is_recurring = true`)
+   - Un **Vercel Cron Job** (disponible en el plan gratuito, ejecutable 1 vez al día) llama diariamente a una ruta protegida (ej. `/api/cron/generate-recurring`), validando un secreto compartido para que no sea invocable públicamente
+   - Esa ruta busca transacciones plantilla (`is_recurring = true`) con `next_occurrence_date <= hoy` y (`recurring_end_date IS NULL` o `recurring_end_date >= hoy`); por cada una, crea una nueva transacción real (`is_recurring = false`, es solo una ocurrencia) con los mismos datos (cuenta/tarjeta, categoría, monto, comercio), y actualiza `next_occurrence_date` de la plantilla sumando el intervalo según `recurring_frequency`
+   - **Idempotencia obligatoria**: antes de crear la ocurrencia, verificar que no exista ya una transacción generada para esa plantilla y esa fecha (evita duplicados si el cron corre dos veces o falla a medias)
+   - Casos de prueba: Netflix (mensual) genera exactamente una transacción por mes sin duplicarse; Strava (anual) no genera nada en los meses intermedios; una recurrencia con `recurring_end_date` ya vencida deja de generar
+9. **Fase 9 — Pulido de UX**: modo oscuro, accesibilidad y animaciones/transiciones
+   - **Modo oscuro**: el sistema de diseño de referencia (monday.com/Refero) es exclusivamente claro — no trae variante oscura definida. Se debe derivar una paleta oscura propia (invertir `--color-cloud`/`--color-snow` por tonos oscuros, ajustar los pasteles de acento para que mantengan contraste legible sobre fondo oscuro) manteniendo violeta `#6161ff` como color de acción en ambos modos. Toggle manual + respeto de `prefers-color-scheme` del sistema como default, guardado en cookie o localStorage
+   - **Accesibilidad**: contraste mínimo AA en texto sobre fondos pastel y oscuros, foco visible en todo elemento interactivo, `aria-label` en íconos sin texto visible, tamaño mínimo de 44px en objetivos táctiles (dado el enfoque mobile-first), formularios navegables y anunciables por lector de pantalla
+   - **Animaciones/transiciones**: microinteracciones sutiles en botones y cards (hover/press), transición suave entre estados de carga (skeleton → contenido) y al navegar entre pestañas, respetando `prefers-reduced-motion` para quien lo tenga activado
 
 ## 8. Diseño visual
 

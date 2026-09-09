@@ -29,19 +29,19 @@ export default function LoginPage() {
         />
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Entrando..." : "Entrar"}
       </Button>
 
       <div className="mt-2 flex flex-col gap-1 text-center text-sm text-slate">
-        <Link href="/forgot-password" className="hover:text-monday-violet">
+        <Link href="/forgot-password" className="hover:text-violet-text">
           ¿Olvidaste tu contraseña?
         </Link>
         <span>
           ¿No tienes cuenta?{" "}
-          <Link href="/register" className="font-medium text-monday-violet">
+          <Link href="/register" className="font-medium text-violet-text">
             Regístrate
           </Link>
         </span>

@@ -60,7 +60,7 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-light text-ink md:text-3xl">Reportes</h1>
@@ -71,9 +71,10 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
             <button
               key={r}
               onClick={() => router.push(`/reports?months=${r}`)}
+              aria-pressed={months === r}
               className={
-                "rounded-pill px-4 py-1.5 text-sm " +
-                (months === r ? "bg-monday-violet text-snow" : "bg-pebble/40 text-slate hover:bg-pebble/60")
+                "min-h-11 rounded-pill px-4 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet " +
+                (months === r ? "bg-monday-violet text-white" : "bg-pebble/40 text-slate hover:bg-pebble/60")
               }
             >
               {r} meses

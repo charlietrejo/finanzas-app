@@ -21,15 +21,15 @@ export default function ForgotPasswordPage() {
         <Input id="email" name="email" type="email" required autoComplete="email" />
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-      {state?.success && <p className="text-sm text-emerald-700">{state.success}</p>}
+      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state?.success && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">{state.success}</p>}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Enviando..." : "Enviar link"}
       </Button>
 
       <p className="mt-2 text-center text-sm text-slate">
-        <Link href="/login" className="font-medium text-monday-violet">
+        <Link href="/login" className="font-medium text-violet-text">
           Volver a iniciar sesión
         </Link>
       </p>

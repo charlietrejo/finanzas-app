@@ -1,3 +1,4 @@
+import { advanceRecurringDate } from "@/lib/recurring";
 import type { RecurringFrequency } from "@/types/database";
 
 export type UpcomingPaymentSource = "debt" | "credit_account" | "recurring_transaction";
@@ -36,19 +37,16 @@ function nextMonthlyDueDate(dueDay: number, today: Date): Date {
   return new Date(Date.UTC(year, month + 1, nextMonthDay));
 }
 
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 86_400_000);
-}
-
 /**
  * El ancla de una transacción recurrente es su propia columna `date`
- * (sección 3.2/4 del doc — ya no se guarda un "next_date" aparte que haya
- * que avanzar y persistir); aquí se calcula la próxima ocurrencia real desde
- * ese ancla, avanzando por `frequency` (semanal/mensual/anual/personalizada
- * cada N días) las veces que hagan falta hasta llegar a hoy o después. Para
- * "monthly"/"annual" se recalcula cada paso desde el día original (no desde
- * el día ya recortado del paso anterior), para que un ancla en día 31 no
- * quede fija en 28/30 para siempre tras pasar por un mes corto.
+ * (sección 3.2/4 del doc); aquí se proyecta la próxima ocurrencia real
+ * probando `steps` = 0, 1, 2... SIEMPRE contra ese mismo ancla inmutable
+ * (vía `advanceRecurringDate`, que recalcula el clamp de día desde cero en
+ * cada llamada) hasta llegar a hoy o después — a diferencia del cron
+ * (Fase 8), que encadena `next_occurrence_date` paso a paso, aquí no hay
+ * ningún valor persistido que encadenar, así que proyectar desde el ancla
+ * original evita que un mes corto de por medio deje el día recortado para
+ * siempre en los meses largos siguientes.
  */
 function nextRecurringDate(
   anchorDate: string,
@@ -56,32 +54,17 @@ function nextRecurringDate(
   intervalDays: number | null,
   today: Date
 ): Date {
-  const [y, m, d] = anchorDate.slice(0, 10).split("-").map(Number);
   const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  let iterations = 0;
+  let steps = 0;
+  let candidateStr = anchorDate.slice(0, 10);
+  let candidate = new Date(`${candidateStr}T00:00:00Z`);
 
-  if (frequency === "monthly" || frequency === "annual") {
-    const monthStep = frequency === "annual" ? 12 : 1;
-    let monthIndex = m - 1;
-    let year = y;
-    let date = new Date(Date.UTC(year, monthIndex, Math.min(d, daysInMonth(year, monthIndex))));
-    while (date.getTime() < todayMidnight.getTime() && iterations < 10_000) {
-      monthIndex += monthStep;
-      year += Math.floor(monthIndex / 12);
-      monthIndex = ((monthIndex % 12) + 12) % 12;
-      date = new Date(Date.UTC(year, monthIndex, Math.min(d, daysInMonth(year, monthIndex))));
-      iterations++;
-    }
-    return date;
+  while (candidate.getTime() < todayMidnight.getTime() && steps < 10_000) {
+    steps++;
+    candidateStr = advanceRecurringDate(anchorDate, frequency, intervalDays, steps);
+    candidate = new Date(`${candidateStr}T00:00:00Z`);
   }
-
-  const stepDays = frequency === "weekly" ? 7 : Math.max(1, intervalDays ?? 1);
-  let date = new Date(Date.UTC(y, m - 1, d));
-  while (date.getTime() < todayMidnight.getTime() && iterations < 10_000) {
-    date = addDays(date, stepDays);
-    iterations++;
-  }
-  return date;
+  return candidate;
 }
 
 function toUpcoming(

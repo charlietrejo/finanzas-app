@@ -33,13 +33,14 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
             key={href}
             href={href}
             className={cn(
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet",
               orientation === "horizontal"
                 ? "flex min-w-[74px] shrink-0 flex-col items-center gap-1 px-1 py-2 text-[11px] leading-tight"
                 : "flex items-center gap-3 rounded-badge px-4 py-2.5 text-sm",
               active
                 ? orientation === "horizontal"
-                  ? "text-monday-violet"
-                  : "bg-periwinkle text-monday-violet font-medium"
+                  ? "text-violet-text"
+                  : "bg-periwinkle text-violet-text font-medium"
                 : "text-slate hover:text-ink"
             )}
           >

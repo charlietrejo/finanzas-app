@@ -30,7 +30,7 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
   }, [debts, strategy]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Deudas</h1>
         {!creating && (
@@ -47,9 +47,10 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
             <button
               key={s}
               onClick={() => setStrategy(s)}
+              aria-pressed={strategy === s}
               className={
-                "rounded-pill px-4 py-1.5 " +
-                (strategy === s ? "bg-monday-violet text-snow" : "bg-pebble/40 text-slate hover:bg-pebble/60")
+                "min-h-11 rounded-pill px-4 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet " +
+                (strategy === s ? "bg-monday-violet text-white" : "bg-pebble/40 text-slate hover:bg-pebble/60")
               }
             >
               {s === "none" ? "Sin ordenar" : s === "snowball" ? "Bola de nieve" : "Avalancha"}
@@ -75,7 +76,7 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
                   <div>
                     <div className="flex items-center gap-2">
                       {strategy !== "none" && (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-periwinkle text-xs font-medium text-monday-violet">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-periwinkle text-xs font-medium text-violet-text">
                           {index + 1}
                         </span>
                       )}
@@ -95,7 +96,7 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
                     <button
                       aria-label="Editar deuda"
                       onClick={() => setEditingId(debt.id)}
-                      className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+                      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
                     >
                       <Pencil size={16} />
                     </button>
@@ -148,7 +149,7 @@ function DeleteDebtButton({ id, name }: { id: string; name: string }) {
         await deleteDebt(id);
         setPending(false);
       }}
-      className="rounded-badge p-1.5 text-slate hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>
@@ -168,7 +169,7 @@ function CreateDebtForm({ onDone }: { onDone: () => void }) {
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">Nueva deuda</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -237,7 +238,7 @@ function CreateDebtForm({ onDone }: { onDone: () => void }) {
           )}
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -264,7 +265,7 @@ function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">Editar deuda</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -354,7 +355,7 @@ function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
           )}
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -421,7 +422,7 @@ function RegisterPaymentForm({
         </div>
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending || accounts.length === 0}>
@@ -466,7 +467,7 @@ function AmortizationSimulator({ debt }: { debt: Debt }) {
       </div>
 
       {result.neverPaysOff ? (
-        <p className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
           Con este pago mensual nunca se termina de pagar la deuda (no cubre el interés generado).
         </p>
       ) : (

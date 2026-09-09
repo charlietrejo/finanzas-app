@@ -17,7 +17,7 @@ export function AccountsClient({ accounts }: { accounts: Account[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Cuentas</h1>
         {!creating && (
@@ -56,7 +56,7 @@ export function AccountsClient({ accounts }: { accounts: Account[] }) {
                     <button
                       aria-label="Editar cuenta"
                       onClick={() => setEditingId(account.id)}
-                      className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+                      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
                     >
                       <Pencil size={16} />
                     </button>
@@ -90,7 +90,7 @@ function CreateAccountForm({ onDone }: { onDone: () => void }) {
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">Nueva cuenta</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -141,7 +141,7 @@ function CreateAccountForm({ onDone }: { onDone: () => void }) {
           />
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -170,7 +170,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">Editar cuenta</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -192,7 +192,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
           </Select>
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -225,7 +225,7 @@ function DeleteAccountButton({ id, name }: { id: string; name: string }) {
         await deleteAccount(id);
         setPending(false);
       }}
-      className="rounded-badge p-1.5 text-slate hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>

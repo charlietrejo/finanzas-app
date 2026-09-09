@@ -42,8 +42,8 @@ export default function RegisterPage() {
         />
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-      {state?.success && <p className="text-sm text-emerald-700">{state.success}</p>}
+      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state?.success && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">{state.success}</p>}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Creando cuenta..." : "Crear cuenta"}
@@ -51,7 +51,7 @@ export default function RegisterPage() {
 
       <p className="mt-2 text-center text-sm text-slate">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="font-medium text-monday-violet">
+        <Link href="/login" className="font-medium text-violet-text">
           Inicia sesión
         </Link>
       </p>

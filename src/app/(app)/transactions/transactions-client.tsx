@@ -54,12 +54,12 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
 
   if (accounts.length === 0 && creditCards.length === 0) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 animate-fade-in">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Movimientos</h1>
         <Card>
           <p className="text-sm text-slate">
             Necesitas al menos una cuenta antes de registrar movimientos. Ve a{" "}
-            <Link href="/accounts" className="font-medium text-monday-violet">
+            <Link href="/accounts" className="font-medium text-violet-text">
               Cuentas
             </Link>{" "}
             para crear una.
@@ -70,7 +70,7 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Movimientos</h1>
         {!creating && (
@@ -136,7 +136,11 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                   <p
                     className={
                       "text-lg font-light " +
-                      (t.type === "expense" ? "text-red-600" : t.type === "income" ? "text-emerald-700" : "text-ink")
+                      (t.type === "expense"
+                        ? "text-red-600 dark:text-red-400"
+                        : t.type === "income"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-ink")
                     }
                   >
                     {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}
@@ -145,7 +149,7 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                   <button
                     aria-label="Editar movimiento"
                     onClick={() => setEditingId(t.id)}
-                    className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+                    className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
                   >
                     <Pencil size={16} />
                   </button>
@@ -172,7 +176,7 @@ function DeleteTransactionButton({ id }: { id: string }) {
         await deleteTransaction(id);
         setPending(false);
       }}
-      className="rounded-badge p-1.5 text-slate hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>
@@ -275,7 +279,7 @@ function TransactionForm({
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">{isEdit ? "Editar movimiento" : "Nuevo movimiento"}</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -444,17 +448,27 @@ function TransactionForm({
                 id="merchant_search"
                 value={merchantQuery}
                 autoComplete="off"
+                role="combobox"
+                aria-expanded={showMerchantList && filteredMerchants.length > 0}
+                aria-controls="merchant-suggestions"
                 onFocus={() => setShowMerchantList(true)}
                 onChange={(e) => {
                   setMerchantQuery(e.target.value);
                   setMerchantId("");
                   setShowMerchantList(true);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setShowMerchantList(false);
+                }}
                 placeholder="Ej. Walmart, Netflix..."
               />
               <input type="hidden" name="merchant_id" value={merchantId} />
               {showMerchantList && filteredMerchants.length > 0 && (
-                <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-badge border border-mist bg-snow shadow-[var(--shadow-card)]">
+                <ul
+                  id="merchant-suggestions"
+                  aria-label="Sugerencias de comercio"
+                  className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-badge border border-mist bg-snow shadow-[var(--shadow-card)]"
+                >
                   {filteredMerchants.map((m) => (
                     <li key={m.id}>
                       <button
@@ -473,7 +487,7 @@ function TransactionForm({
             {suggestion && (
               <div className="flex items-center justify-between rounded-badge bg-lavender px-4 py-2 text-sm text-ink">
                 <span>Categoría sugerida: {suggestion}</span>
-                <button type="button" onClick={acceptSuggestion} className="font-medium text-monday-violet">
+                <button type="button" onClick={acceptSuggestion} className="font-medium text-violet-text">
                   Usar
                 </button>
               </div>
@@ -491,7 +505,7 @@ function TransactionForm({
           <Input id="note" name="note" defaultValue={transaction?.note ?? ""} maxLength={500} />
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>

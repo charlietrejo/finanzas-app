@@ -104,6 +104,10 @@ const SUITES = [
       USER_B_PASSWORD: TEST_PASSWORD,
     }),
   },
+  // Autosuficiente (crea y borra su propio usuario de prueba) — no usa
+  // EMAIL_A/EMAIL_B. Requiere SUPABASE_SERVICE_ROLE_KEY (Fase 8: la RPC que
+  // prueba es security definer, solo invocable con ese rol).
+  { name: "verify-recurring-cron.mjs", env: () => ({}) },
 ];
 
 async function main() {

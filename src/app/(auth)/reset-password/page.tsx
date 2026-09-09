@@ -29,7 +29,7 @@ export default function ResetPasswordPage() {
         <p className="text-sm text-slate">
           Solicita un nuevo link para restablecer tu contraseña.
         </p>
-        <Link href="/forgot-password" className="font-medium text-monday-violet">
+        <Link href="/forgot-password" className="font-medium text-violet-text">
           Solicitar nuevo link
         </Link>
       </div>
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
         />
       </div>
 
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Guardando..." : "Guardar contraseña"}

@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(auth)/actions";
 import { NavLinks } from "@/components/navigation/nav-links";
+import { RouteFade } from "@/components/navigation/route-fade";
 import { IosInstallHint } from "@/components/pwa/ios-install-hint";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LogOut } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +18,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login");
   }
 
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("theme")?.value;
+  const initialTheme = themeCookie === "dark" ? "dark" : "light";
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-cloud md:flex-row">
       <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-pebble bg-snow p-6 md:flex print:hidden">
@@ -24,14 +31,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex flex-col gap-2">
           <p className="truncate text-xs text-slate">{user.email}</p>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-badge px-4 py-2 text-sm text-slate hover:bg-pebble/40"
-            >
-              <LogOut size={16} /> Cerrar sesión
-            </button>
-          </form>
+          <div className="flex items-center justify-between">
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="flex items-center gap-2 rounded-badge px-4 py-2.5 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+              >
+                <LogOut size={16} /> Cerrar sesión
+              </button>
+            </form>
+            <ThemeToggle initialTheme={initialTheme} />
+          </div>
         </div>
       </aside>
 
@@ -41,16 +51,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
         >
           <p className="text-lg font-light text-ink">Finanzas</p>
-          <form action={signOut}>
-            <button type="submit" aria-label="Cerrar sesión" className="text-slate">
-              <LogOut size={20} />
-            </button>
-          </form>
+          <div className="flex items-center gap-1">
+            <ThemeToggle initialTheme={initialTheme} />
+            <form action={signOut}>
+              <button
+                type="submit"
+                aria-label="Cerrar sesión"
+                className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+              >
+                <LogOut size={20} />
+              </button>
+            </form>
+          </div>
         </header>
 
         <IosInstallHint />
 
-        <main className="flex-1 px-4 py-6 md:px-10 md:py-10">{children}</main>
+        <main className="flex-1 px-4 py-6 md:px-10 md:py-10">
+          <RouteFade>{children}</RouteFade>
+        </main>
       </div>
 
       <div

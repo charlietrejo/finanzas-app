@@ -20,7 +20,7 @@ export function Card({ className, tone = "default", ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-card p-6 shadow-[var(--shadow-card)]",
+        "rounded-card p-6 shadow-[var(--shadow-card)] transition-[background-color,box-shadow] duration-200 hover:shadow-[var(--shadow-card-hover)]",
         toneClasses[tone],
         className
       )}

@@ -48,7 +48,7 @@ export function BudgetsClient({ month, budgets, categories: initialCategories, s
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light text-ink md:text-3xl">Presupuestos</h1>
         {!creating && availableCategories.length > 0 && (
@@ -62,7 +62,7 @@ export function BudgetsClient({ month, budgets, categories: initialCategories, s
         <button
           aria-label="Mes anterior"
           onClick={() => goToMonth(shiftMonth(month, -1))}
-          className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+          className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
         >
           <ChevronLeft size={20} />
         </button>
@@ -70,7 +70,7 @@ export function BudgetsClient({ month, budgets, categories: initialCategories, s
         <button
           aria-label="Mes siguiente"
           onClick={() => goToMonth(shiftMonth(month, 1))}
-          className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+          className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
         >
           <ChevronRight size={20} />
         </button>
@@ -115,7 +115,7 @@ export function BudgetsClient({ month, budgets, categories: initialCategories, s
                     <button
                       aria-label="Editar presupuesto"
                       onClick={() => setEditingId(budget.id)}
-                      className="rounded-badge p-1.5 text-slate hover:bg-pebble/40"
+                      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
                     >
                       <Pencil size={16} />
                     </button>
@@ -124,7 +124,14 @@ export function BudgetsClient({ month, budgets, categories: initialCategories, s
                 </div>
 
                 <div>
-                  <div className="h-2 w-full overflow-hidden rounded-badge bg-pebble">
+                  <div
+                    className="h-2 w-full overflow-hidden rounded-badge bg-pebble"
+                    role="progressbar"
+                    aria-valuenow={Math.round(pct)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`Presupuesto de ${budget.category?.name ?? "esta categoría"}: ${formatMXN(spent)} de ${formatMXN(budget.amount_limit)}`}
+                  >
                     <div
                       className={`h-full ${STATUS_BAR_COLOR[status]}`}
                       style={{ width: `${pct}%` }}
@@ -155,7 +162,7 @@ function DeleteBudgetButton({ id, categoryName }: { id: string; categoryName: st
         await deleteBudget(id);
         setPending(false);
       }}
-      className="rounded-badge p-1.5 text-slate hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>
@@ -201,7 +208,7 @@ function CreateBudgetForm({
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">Nuevo presupuesto — {formatMonthLabel(month)}</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -231,7 +238,7 @@ function CreateBudgetForm({
             <button
               type="button"
               onClick={() => setNewCategoryOpen(true)}
-              className="mt-2 text-sm font-medium text-monday-violet"
+              className="mt-2 text-sm font-medium text-violet-text"
             >
               + Nueva categoría de gasto
             </button>
@@ -267,7 +274,7 @@ function CreateBudgetForm({
           />
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending || !categoryId}>
@@ -293,7 +300,7 @@ function EditBudgetForm({ budget, onDone }: { budget: BudgetRow; onDone: () => v
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">{budget.category?.name}</h2>
-        <button onClick={onDone} aria-label="Cerrar" className="text-slate">
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
       </div>
@@ -324,7 +331,7 @@ function EditBudgetForm({ budget, onDone }: { budget: BudgetRow; onDone: () => v
           />
         </div>
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>

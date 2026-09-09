@@ -130,6 +130,10 @@ export type Transaction = {
   recurring_frequency: RecurringFrequency | null;
   recurring_interval_days: number | null;
   recurring_end_date: string | null;
+  // Fase 8 del doc: solo se llena si is_recurring — el motor de
+  // recurrencias (cron) lo usa para saber cuándo generar la siguiente
+  // ocurrencia real, y lo avanza un periodo cada vez que genera una.
+  next_occurrence_date: string | null;
   created_at: string;
 };
 
@@ -276,6 +280,7 @@ export interface Database {
           p_recurring_frequency?: RecurringFrequency | null;
           p_recurring_interval_days?: number | null;
           p_recurring_end_date?: string | null;
+          p_next_occurrence_date?: string | null;
         };
         Returns: Transaction;
       };
@@ -296,12 +301,22 @@ export interface Database {
           p_recurring_frequency?: RecurringFrequency | null;
           p_recurring_interval_days?: number | null;
           p_recurring_end_date?: string | null;
+          p_next_occurrence_date?: string | null;
         };
         Returns: Transaction;
       };
       delete_transaction: {
         Args: { p_id: string };
         Returns: void;
+      };
+      // Fase 8: solo invocable con el service role key (ver
+      // 019_recurring_engine.sql / 020_fix_recurring_null_serialization.sql).
+      // Retorna jsonb (no `transactions`) a propósito: un jsonb null llega
+      // como JSON null real; un row type NULL llegaría como fila de
+      // columnas null (ver comentario en la migración 020).
+      generate_recurring_occurrence: {
+        Args: { p_template_id: string; p_next_occurrence_date: string };
+        Returns: Transaction | null;
       };
       create_debt_payment: {
         Args: {

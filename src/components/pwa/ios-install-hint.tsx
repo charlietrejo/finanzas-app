@@ -40,7 +40,11 @@ export function IosInstallHint() {
         Instala Finanzas: toca <strong>Compartir</strong> y luego{" "}
         <strong>Agregar a pantalla de inicio</strong>.
       </p>
-      <button aria-label="Cerrar aviso" onClick={dismiss} className="shrink-0 text-slate">
+      <button
+        aria-label="Cerrar aviso"
+        onClick={dismiss}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-badge text-slate transition-colors hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+      >
         <X size={16} />
       </button>
     </div>

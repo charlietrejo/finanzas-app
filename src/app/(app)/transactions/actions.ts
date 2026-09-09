@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { transactionFormSchema } from "@/lib/validations/transaction";
+import { advanceRecurringDate } from "@/lib/recurring";
+import type { TransactionFormValues } from "@/lib/validations/transaction";
 
 export type ActionState = { error?: string } | null;
 
@@ -10,6 +12,16 @@ function splitPayWith(value: FormDataEntryValue | null): { account_id: string | 
   if (typeof value !== "string" || !value.includes(":")) return { account_id: null, debt_id: null };
   const [kind, id] = value.split(":");
   return kind === "debt" ? { account_id: null, debt_id: id } : { account_id: id, debt_id: null };
+}
+
+/**
+ * Fase 8 del doc: next_occurrence_date se calcula aquí (una sola fuente de
+ * verdad en TS, src/lib/recurring.ts) y se pasa a la RPC ya resuelto — la
+ * RPC nunca hace aritmética de fechas, solo persiste el valor recibido.
+ */
+function computeNextOccurrenceDate(d: TransactionFormValues): string | null {
+  if (!d.is_recurring || !d.recurring_frequency) return null;
+  return advanceRecurringDate(d.date, d.recurring_frequency, d.recurring_interval_days ?? null);
 }
 
 function parseFormData(formData: FormData) {
@@ -59,6 +71,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
     p_recurring_frequency: d.recurring_frequency ?? null,
     p_recurring_interval_days: d.recurring_interval_days ?? null,
     p_recurring_end_date: d.recurring_end_date ?? null,
+    p_next_occurrence_date: computeNextOccurrenceDate(d),
   });
 
   if (error) {
@@ -100,6 +113,7 @@ export async function updateTransaction(
     p_recurring_frequency: d.recurring_frequency ?? null,
     p_recurring_interval_days: d.recurring_interval_days ?? null,
     p_recurring_end_date: d.recurring_end_date ?? null,
+    p_next_occurrence_date: computeNextOccurrenceDate(d),
   });
 
   if (error) {

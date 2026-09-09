@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
+/* Fase 9: `dark:` responde a data-theme (siempre resuelto — ver
+   src/app/layout.tsx), no a prefers-color-scheme directamente, para que el
+   toggle manual y el default de sistema usen la misma variante. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   /* Brand & accent */
   --color-monday-violet: #6161ff;
+  /* Texto en violeta (links, nav activo) — separado de monday-violet porque
+     ese debe quedarse en #6161ff para fondos de botón (sección 8 del doc),
+     pero como TEXTO #6161ff no llega a AA en ningún modo (4.17:1 sobre
+     --color-cloud claro, ~3.8:1 en oscuro). Aquí se oscurece un poco
+     (#5b5bf0 da 4.62:1 en claro); en modo oscuro se aclara, ver abajo. */
+  --color-violet-text: #5b5bf0;
   --color-ink: #333333;
   --color-slate: #535768;
   --color-cloud: #f5f6f8;
@@ -32,9 +43,102 @@
 
   /* Shadow */
   --shadow-card: rgba(205, 208, 223, 0.4) 0px 2px 48px 0px;
+  /* Fase 9: microinteracción sutil de hover en Card (sección "botones y
+     cards" del doc) — mismo tono, solo un poco más presente. */
+  --shadow-card-hover: rgba(205, 208, 223, 0.6) 0px 4px 56px 0px;
+}
+
+/*
+ * Paleta oscura (Fase 9 del doc — el sistema de referencia monday.com/Refero
+ * es exclusivamente claro, esta se derivó a mano y se validó por contraste
+ * WCAG AA, no es un invert automático). --color-monday-violet NUNCA cambia
+ * (sigue siendo el color de acción en ambos modos, sección 8 del doc); los
+ * pastel se oscurecen de verdad (no solo se confía en la opacidad) porque
+ * `periwinkle`/`lavender` se usan a opacidad completa en varios sitios con
+ * texto encima. Dos bloques con las mismas variables: uno por preferencia de
+ * sistema (sin elección explícita) y otro por elección explícita del toggle
+ * (gana siempre, sin media query).
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-violet-text: #9999ff;
+    --color-ink: #eef0f4;
+    /* #9aa0b8 solo daba 4.24:1 sobre --color-mint oscuro (bajo AA); #a1a6bd
+       cumple AA (>=4.5:1) contra --color-cloud Y los seis pasteles oscuros. */
+    --color-slate: #a1a6bd;
+    --color-cloud: #14151c;
+    --color-snow: #1c1d27;
+
+    --color-mint: #24432a;
+    --color-sky: #1b3a42;
+    --color-apricot: #4a2a16;
+    --color-lavender: #3a3049;
+    --color-periwinkle: #2c3050;
+    --color-cornflower: #1f2f4a;
+
+    --color-mist: #34374a;
+    --color-pebble: #262838;
+    --color-fog: #40435a;
+
+    --shadow-card: rgba(0, 0, 0, 0.4) 0px 2px 48px 0px;
+    --shadow-card-hover: rgba(0, 0, 0, 0.55) 0px 4px 56px 0px;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-violet-text: #9999ff;
+  --color-ink: #eef0f4;
+  --color-slate: #9aa0b8;
+  --color-cloud: #14151c;
+  --color-snow: #1c1d27;
+
+  --color-mint: #24432a;
+  --color-sky: #1b3a42;
+  --color-apricot: #4a2a16;
+  --color-lavender: #3a3049;
+  --color-periwinkle: #2c3050;
+  --color-cornflower: #1f2f4a;
+
+  --color-mist: #34374a;
+  --color-pebble: #262838;
+  --color-fog: #40435a;
+
+  --shadow-card: rgba(0, 0, 0, 0.4) 0px 2px 48px 0px;
+  --shadow-card-hover: rgba(0, 0, 0, 0.55) 0px 4px 56px 0px;
 }
 
 body {
   background: var(--color-cloud);
   color: var(--color-ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Fase 9: transición sutil de skeleton (loading.tsx) a contenido real, y al
+   navegar entre pestañas (ver src/components/navigation/route-fade.tsx). */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+/* Respeta prefers-reduced-motion para TODAS las transiciones/animaciones de
+   la app de una sola vez (botones, cards, fade-in, toggle de tema, etc.) —
+   AnimatedAmount (src/components/ui/animated-amount.tsx) hace su propio
+   chequeo en JS porque anima un valor numérico, no una propiedad CSS. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

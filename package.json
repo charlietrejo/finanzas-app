@@ -14,6 +14,7 @@
     "verify:goals": "node --env-file=.env.local scripts/verify-goal-contribution-rpc.mjs",
     "verify:reports": "node --env-file=.env.local scripts/verify-reports-data.mjs",
     "verify:isolation": "node --env-file=.env.local scripts/verify-cross-user-isolation.mjs",
+    "verify:recurring": "node --env-file=.env.local scripts/verify-recurring-cron.mjs",
     "verify:all": "node --env-file=.env.local scripts/verify-all.mjs"
   },
   "dependencies": {

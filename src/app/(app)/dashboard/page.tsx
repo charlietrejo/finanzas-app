@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedAmount } from "@/components/ui/animated-amount";
 import { formatMXN } from "@/lib/format";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 animate-fade-in">
       <div>
         <h1 className="text-2xl font-light text-ink md:text-3xl">Dashboard</h1>
         <p className="text-sm text-slate">Resumen de tus finanzas en MXN</p>
@@ -54,7 +55,9 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap gap-4">
         <Card tone="mint" className="w-full max-w-sm">
           <p className="text-sm font-medium text-slate">Saldo total</p>
-          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(totalBalance)}</p>
+          <p className="mt-2 text-3xl font-light text-ink">
+            <AnimatedAmount value={totalBalance} />
+          </p>
         </Card>
 
         {budgetList.length > 0 && (
@@ -63,7 +66,7 @@ export default async function DashboardPage() {
             <p className="mt-2 text-3xl font-light text-ink">
               {overOrWarningCount > 0 ? `${overOrWarningCount} en alerta` : "Todo al día"}
             </p>
-            <Link href="/budgets" className="mt-2 inline-block text-sm font-medium text-monday-violet">
+            <Link href="/budgets" className="mt-2 inline-block text-sm font-medium text-violet-text">
               Ver presupuestos
             </Link>
           </Card>
@@ -72,11 +75,13 @@ export default async function DashboardPage() {
         {totalDebt > 0 && (
           <Card tone="lavender" className="w-full max-w-sm">
             <p className="text-sm font-medium text-slate">Deudas totales</p>
-            <p className="mt-2 text-3xl font-light text-ink">{formatMXN(totalDebt)}</p>
+            <p className="mt-2 text-3xl font-light text-ink">
+              <AnimatedAmount value={totalDebt} />
+            </p>
             {creditCardDebt > 0 && (
               <p className="mt-1 text-xs text-slate">Incluye {formatMXN(creditCardDebt)} en tarjetas de crédito</p>
             )}
-            <Link href="/debts" className="mt-2 inline-block text-sm font-medium text-monday-violet">
+            <Link href="/debts" className="mt-2 inline-block text-sm font-medium text-violet-text">
               Ver deudas
             </Link>
           </Card>
@@ -108,7 +113,7 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-medium text-ink">Cuentas</h2>
-          <Link href="/accounts" className="text-sm font-medium text-monday-violet">
+          <Link href="/accounts" className="text-sm font-medium text-violet-text">
             Ver todas
           </Link>
         </div>
@@ -117,7 +122,7 @@ export default async function DashboardPage() {
           <Card>
             <p className="text-sm text-slate">
               Aún no tienes cuentas.{" "}
-              <Link href="/accounts" className="font-medium text-monday-violet">
+              <Link href="/accounts" className="font-medium text-violet-text">
                 Crea tu primera cuenta
               </Link>
               .
