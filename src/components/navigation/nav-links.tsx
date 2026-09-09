@@ -22,7 +22,7 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
     <nav
       className={cn(
         orientation === "horizontal"
-          ? "flex items-center overflow-x-auto"
+          ? "flex items-center gap-1 overflow-x-auto px-1"
           : "flex flex-col gap-1"
       )}
     >
@@ -34,7 +34,7 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
             href={href}
             className={cn(
               orientation === "horizontal"
-                ? "flex min-w-[68px] shrink-0 flex-col items-center gap-1 py-2 text-xs"
+                ? "flex min-w-[74px] shrink-0 flex-col items-center gap-1 px-1 py-2 text-[11px] leading-tight"
                 : "flex items-center gap-3 rounded-badge px-4 py-2.5 text-sm",
               active
                 ? orientation === "horizontal"
@@ -43,8 +43,8 @@ export function NavLinks({ orientation }: { orientation: "horizontal" | "vertica
                 : "text-slate hover:text-ink"
             )}
           >
-            <Icon size={orientation === "horizontal" ? 20 : 18} />
-            <span>{label}</span>
+            <Icon size={orientation === "horizontal" ? 23 : 18} />
+            <span className="whitespace-nowrap">{label}</span>
           </Link>
         );
       })}

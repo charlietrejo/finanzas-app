@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, X, HandCoins, Calculator } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, X, HandCoins, Calculator, CreditCard } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -10,12 +11,21 @@ import { formatMXN } from "@/lib/format";
 import { DEBT_TYPE_LABELS, DEBT_TYPES } from "@/lib/constants/debt-types";
 import { sortAvalanche, sortSnowball } from "@/lib/debt-strategy";
 import { buildAmortizationSchedule } from "@/lib/amortization";
+import type { CreditCardDebt } from "@/lib/credit-card-debt";
 import { createDebt, createDebtPayment, deleteDebt, updateDebt, type ActionState } from "./actions";
 import type { Account, Debt, DebtType } from "@/types/database";
 
 type Strategy = "none" | "snowball" | "avalanche";
 
-export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Account[] }) {
+export function DebtsClient({
+  debts,
+  accounts,
+  creditCardDebts,
+}: {
+  debts: Debt[];
+  accounts: Account[];
+  creditCardDebts: CreditCardDebt[];
+}) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -59,11 +69,39 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
 
       {creating && <CreateDebtForm onDone={() => setCreating(false)} />}
 
-      {debts.length === 0 && !creating ? (
+      {creditCardDebts.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-medium text-slate">Tarjetas de crédito (desde Cuentas)</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {creditCardDebts.map((cc) => (
+              <Card key={cc.accountId} className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard size={16} className="text-monday-violet" />
+                  <Badge tone="warning">Tarjeta</Badge>
+                </div>
+                <p className="font-medium text-ink">{cc.name}</p>
+                <p className="text-2xl font-light text-ink">{formatMXN(cc.owed)}</p>
+                {cc.creditLimit != null && (
+                  <p className="text-xs text-slate">Límite: {formatMXN(cc.creditLimit)}</p>
+                )}
+                <Link href="/accounts" className="text-sm font-medium text-monday-violet">
+                  Ver en Cuentas
+                </Link>
+              </Card>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-slate">
+            Se calcula solo con el saldo de la cuenta — para pagarlas, registra una transferencia hacia esta
+            cuenta desde Movimientos.
+          </p>
+        </div>
+      )}
+
+      {debts.length === 0 && !creating && creditCardDebts.length === 0 ? (
         <Card>
           <p className="text-sm text-slate">Aún no tienes deudas registradas.</p>
         </Card>
-      ) : (
+      ) : debts.length === 0 ? null : (
         <div className="flex flex-col gap-4">
           {orderedDebts.map((debt, index) =>
             editingId === debt.id ? (

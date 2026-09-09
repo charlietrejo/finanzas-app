@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCreditCardDebts } from "@/lib/credit-card-debt";
 import { DebtsClient } from "./debts-client";
 import type { Account, Debt } from "@/types/database";
 
@@ -10,10 +11,13 @@ export default async function DebtsPage() {
     supabase.from("accounts").select("*").order("created_at", { ascending: true }),
   ]);
 
+  const accountList = (accounts ?? []) as Account[];
+
   return (
     <DebtsClient
       debts={(debts ?? []) as Debt[]}
-      accounts={(accounts ?? []) as Account[]}
+      accounts={accountList}
+      creditCardDebts={getCreditCardDebts(accountList)}
     />
   );
 }
