@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 /**
  * Loading global (Fase 9 del doc: para navegación entre pestañas y
  * reemplazo del skeleton en cargas más largas — ver
- * src/components/ui/route-loading.tsx, que decide cuándo mostrar esto en
- * vez del Skeleton). SVG + CSS puro, sin librerías nuevas.
+ * src/components/ui/route-loading.tsx, el fallback de cada loading.tsx de
+ * ruta). SVG + CSS puro, sin librerías nuevas.
  *
  * Layout con estilos inline (no clases nuevas de Tailwind tipo h-40): en el
  * componente anterior (billetes, ya retirado) `h-40`/`sr-only` no llegaban a
