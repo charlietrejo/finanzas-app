@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank, CreditCard, Target, BarChart3, User } from "lucide-react";
+import { LayoutDashboard, Wallet, ArrowLeftRight, PiggyBank, CreditCard, Target, BarChart3 } from "lucide-react";
 
+// "Cuenta" (/profile) no vive aquí: se movió al lugar donde antes estaba
+// "Cerrar sesión" (sidebar de escritorio y header móvil, ver
+// src/app/(app)/layout.tsx) — un solo punto de acceso, sin duplicarlo
+// también en este menú general.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/accounts", label: "Cuentas", icon: Wallet },
@@ -12,9 +16,6 @@ const NAV_ITEMS = [
   { href: "/debts", label: "Deudas", icon: CreditCard },
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/reports", label: "Reportes", icon: BarChart3 },
-  // Ruta "/profile", no "/account": "/accounts".startsWith("/account") sería
-  // true y el activo de esta pestaña se prendería también en Cuentas.
-  { href: "/profile", label: "Cuenta", icon: User },
 ];
 
 const FOCUS_RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet";

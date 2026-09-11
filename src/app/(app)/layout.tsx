@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/(auth)/actions";
 import { NavLinks } from "@/components/navigation/nav-links";
 import { RouteFade } from "@/components/navigation/route-fade";
 import { IosInstallHint } from "@/components/pwa/ios-install-hint";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { LogOut } from "lucide-react";
+import { User } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -32,14 +32,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col gap-2">
           <p className="truncate text-xs text-slate">{user.email}</p>
           <div className="flex items-center justify-between">
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-badge px-4 py-2.5 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
-              >
-                <LogOut size={16} /> Cerrar sesión
-              </button>
-            </form>
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 rounded-badge px-4 py-2.5 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+            >
+              <User size={16} /> Cuenta
+            </Link>
             <ThemeToggle initialTheme={initialTheme} />
           </div>
         </div>
@@ -53,15 +51,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <p className="text-lg font-light text-ink">Finanzas</p>
           <div className="flex items-center gap-1">
             <ThemeToggle initialTheme={initialTheme} />
-            <form action={signOut}>
-              <button
-                type="submit"
-                aria-label="Cerrar sesión"
-                className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
-              >
-                <LogOut size={20} />
-              </button>
-            </form>
+            <Link
+              href="/profile"
+              className="flex h-11 items-center gap-1.5 rounded-badge px-3 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+            >
+              <User size={18} /> Cuenta
+            </Link>
           </div>
         </header>
 
