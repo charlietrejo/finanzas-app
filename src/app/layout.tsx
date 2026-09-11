@@ -43,6 +43,14 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Northstar",
   },
+  // Sección 8 del doc ("Ícono de la app"): declarado explícito en vez de
+  // dejar la convención de archivo src/app/apple-icon.png (ese archivo se
+  // quitó) — así hay un solo <link rel="apple-touch-icon">, con el tamaño
+  // que iOS pide (180x180), en vez de que iOS caiga en su propio ícono
+  // automático con la letra inicial del nombre de la app.
+  icons: {
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
