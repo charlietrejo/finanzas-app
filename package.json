@@ -15,11 +15,13 @@
     "verify:reports": "node --env-file=.env.local scripts/verify-reports-data.mjs",
     "verify:isolation": "node --env-file=.env.local scripts/verify-cross-user-isolation.mjs",
     "verify:recurring": "node --env-file=.env.local scripts/verify-recurring-cron.mjs",
-    "verify:all": "node --env-file=.env.local scripts/verify-all.mjs"
+    "verify:all": "node --env-file=.env.local scripts/verify-all.mjs",
+    "perf:test": "node --env-file=.env.local scripts/perf-test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "blobatar": "^2.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.43.0",
@@ -41,6 +43,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "jsdom": "^29.1.1",
+    "lighthouse": "^13.4.1",
+    "puppeteer": "^25.10.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.0"
