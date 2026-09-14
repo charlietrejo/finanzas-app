@@ -25,7 +25,11 @@ export async function getReportsData(
       supabase.from("accounts").select("initial_balance, created_at"),
       supabase.from("debts").select("principal, created_at"),
       supabase.from("categories").select("id, name"),
-      supabase.from("transactions").select("type, amount, date, category_id"),
+      supabase
+        .from("transactions")
+        .select(
+          "type, amount, date, category_id, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, next_occurrence_date"
+        ),
     ]);
 
   const transactions = allTransactions ?? [];
@@ -38,7 +42,7 @@ export async function getReportsData(
     transactions,
     months,
   });
-  const netWorth = projectNetWorth(netWorthHistory, 6);
+  const netWorth = projectNetWorth(netWorthHistory, transactions, 6);
 
   return { cashFlow, categoryDistribution, netWorth };
 }

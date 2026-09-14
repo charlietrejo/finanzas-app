@@ -1,4 +1,6 @@
 import { getLastMonths, getMonthRange, shiftMonth } from "@/lib/date-utils";
+import { advanceRecurringDate } from "@/lib/recurring";
+import type { RecurringFrequency } from "@/types/database";
 
 export interface NetWorthPoint {
   month: string;
@@ -75,27 +77,97 @@ export function computeNetWorthSeries({
   });
 }
 
+export interface ProjectionTransactionLike {
+  type: "income" | "expense" | "transfer";
+  amount: number;
+  date: string;
+  is_recurring: boolean;
+  recurring_frequency: RecurringFrequency | null;
+  recurring_interval_days: number | null;
+  recurring_end_date: string | null;
+  next_occurrence_date: string | null;
+}
+
+// Salvaguarda contra una plantilla con datos corruptos (ej. recurring_end_date
+// nunca llega) que de otro modo haría un while() casi infinito.
+const MAX_RECURRING_ITERATIONS = 1000;
+
 /**
- * Proyección de balance futuro "según ritmo actual" (sección 3.6): extiende
- * la serie usando el promedio de los deltas mes a mes ya observados.
+ * Proyección de balance futuro (sección 3.6 del doc) — ya no es un promedio
+ * simple de los deltas históricos. Cada mes proyectado combina dos
+ * componentes que se calculan por separado a propósito, para no contar una
+ * recurrencia dos veces:
+ *
+ *   proyección(mes) = saldo(mes anterior) + promedio_no_recurrente + recurrencias(mes)
+ *
+ * 1) `promedio_no_recurrente`: promedio del flujo neto (ingresos − gastos)
+ *    de los últimos `historyMonths` meses, EXCLUYENDO transacciones
+ *    is_recurring=true — si no se excluyeran, una recurrencia ya capturada
+ *    explícitamente en (2) también se "diluiría" en este promedio.
+ * 2) `recurrencias(mes)`: para cada plantilla activa (is_recurring=true),
+ *    se avanza next_occurrence_date con advanceRecurringDate (mismo motor
+ *    de Fase 8) ocurrencia por ocurrencia hasta el horizonte proyectado,
+ *    sumando cada una en el bucket de SU mes exacto — así una recurrencia
+ *    anual (ej. Strava) solo pesa en su mes de renovación, nunca se reparte
+ *    entre los 12 meses.
  */
-export function projectNetWorth(series: NetWorthPoint[], monthsForward: number = 6): NetWorthPoint[] {
+export function projectNetWorth(
+  series: NetWorthPoint[],
+  transactions: ProjectionTransactionLike[],
+  monthsForward: number = 6,
+  historyMonths: number = 6
+): NetWorthPoint[] {
   if (series.length < 2) return series;
 
-  const deltas: number[] = [];
-  for (let i = 1; i < series.length; i++) {
-    deltas.push(series[i].netWorth - series[i - 1].netWorth);
+  const lastMonth = series[series.length - 1].month;
+
+  // 1) Base histórica no-recurrente.
+  const historyWindow = getLastMonths(historyMonths, lastMonth);
+  const { start: historyStart } = getMonthRange(historyWindow[0]);
+  const { end: historyEnd } = getMonthRange(lastMonth);
+  const nonRecurringFlow = transactions
+    .filter((t) => !t.is_recurring && t.date >= historyStart && t.date < historyEnd)
+    .reduce((sum, t) => {
+      if (t.type === "income") return sum + t.amount;
+      if (t.type === "expense") return sum - t.amount;
+      return sum;
+    }, 0);
+  const avgNonRecurringFlow = nonRecurringFlow / historyMonths;
+
+  // 2) Recurrencias activas, ocurrencia por ocurrencia hasta el horizonte.
+  const futureMonths = Array.from({ length: monthsForward }, (_, i) => shiftMonth(lastMonth, i + 1));
+  const { end: horizonEnd } = getMonthRange(futureMonths[futureMonths.length - 1]);
+  const recurringByMonth = new Map<string, number>(futureMonths.map((m) => [m, 0]));
+
+  const templates = transactions.filter(
+    (t): t is ProjectionTransactionLike & { recurring_frequency: RecurringFrequency; next_occurrence_date: string } =>
+      t.is_recurring && t.type !== "transfer" && t.recurring_frequency !== null && t.next_occurrence_date !== null
+  );
+
+  for (const template of templates) {
+    let occurrence = template.next_occurrence_date;
+    let iterations = 0;
+    while (occurrence < horizonEnd && iterations < MAX_RECURRING_ITERATIONS) {
+      if (template.recurring_end_date && occurrence > template.recurring_end_date) break;
+
+      const monthKey = occurrence.slice(0, 7);
+      const bucket = recurringByMonth.get(monthKey);
+      if (bucket !== undefined) {
+        const delta = template.type === "income" ? template.amount : -template.amount;
+        recurringByMonth.set(monthKey, bucket + delta);
+      }
+
+      occurrence = advanceRecurringDate(occurrence, template.recurring_frequency, template.recurring_interval_days);
+      iterations++;
+    }
   }
-  const avgDelta = deltas.reduce((sum, d) => sum + d, 0) / deltas.length;
 
+  // 3) Combinar.
   const projected: NetWorthPoint[] = [];
-  let lastMonth = series[series.length - 1].month;
   let lastValue = series[series.length - 1].netWorth;
-
-  for (let i = 0; i < monthsForward; i++) {
-    lastMonth = shiftMonth(lastMonth, 1);
-    lastValue += avgDelta;
-    projected.push({ month: lastMonth, netWorth: Math.round(lastValue * 100) / 100, projected: true });
+  for (const month of futureMonths) {
+    lastValue += avgNonRecurringFlow + (recurringByMonth.get(month) ?? 0);
+    projected.push({ month, netWorth: Math.round(lastValue * 100) / 100, projected: true });
   }
 
   return [...series, ...projected];
