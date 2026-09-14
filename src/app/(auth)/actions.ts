@@ -39,6 +39,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
 
 export async function register(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = registerSchema.safeParse({
+    fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
@@ -52,7 +53,9 @@ export async function register(_prev: ActionState, formData: FormData): Promise<
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { emailRedirectTo: `${origin}/dashboard` },
+    // Misma llave que lee/edita la pantalla de Cuenta (user_metadata.full_name,
+    // ver src/app/(app)/profile/actions.ts::updateDisplayName) — sin tabla nueva.
+    options: { emailRedirectTo: `${origin}/dashboard`, data: { full_name: parsed.data.fullName } },
   });
   if (error) {
     return { error: error.message };

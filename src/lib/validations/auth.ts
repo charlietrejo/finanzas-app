@@ -7,6 +7,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
+    fullName: z.string().trim().min(1, "El nombre es obligatorio").max(80, "Máximo 80 caracteres"),
     email: z.string().email("Correo inválido"),
     password: z.string().min(8, "Mínimo 8 caracteres"),
     confirmPassword: z.string(),

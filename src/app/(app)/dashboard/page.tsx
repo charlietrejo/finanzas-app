@@ -17,6 +17,9 @@ export default async function DashboardPage() {
   const month = getCurrentMonth();
 
   const [
+    {
+      data: { user },
+    },
     { data: accounts },
     { data: budgets },
     { data: debts },
@@ -24,6 +27,7 @@ export default async function DashboardPage() {
     { data: goals },
     spentByCategory,
   ] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from("accounts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
     supabase.from("budgets").select("*").eq("month", `${month}-01`),
     supabase.from("debts").select("*").is("archived_at", null),
@@ -31,6 +35,11 @@ export default async function DashboardPage() {
     supabase.from("goals").select("*"),
     getExpenseTotalsByCategory(supabase, month),
   ]);
+
+  // Fase de saludo: mismo user_metadata.full_name que Cuenta lee/edita —
+  // cuentas creadas antes de este cambio no lo tienen, de ahí el respaldo.
+  const fullName = (user?.user_metadata?.full_name as string | undefined)?.trim();
+  const greeting = fullName ? `¡Hola, ${fullName}!` : "¡Hola!";
 
   const list = (accounts ?? []) as Account[];
   const totalBalance = list.reduce((sum, a) => sum + a.current_balance, 0);
@@ -58,7 +67,7 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-light text-ink md:text-3xl">Dashboard</h1>
+        <h1 className="text-2xl font-light text-ink md:text-3xl">{greeting}</h1>
         <p className="text-sm text-slate">{formatTodayLabel()}</p>
       </div>
 

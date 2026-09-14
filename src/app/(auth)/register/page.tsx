@@ -14,6 +14,11 @@ export default function RegisterPage() {
       <h2 className="text-xl font-medium text-ink">Crea tu cuenta</h2>
 
       <div>
+        <Label htmlFor="fullName">Nombre o apodo</Label>
+        <Input id="fullName" name="fullName" type="text" required maxLength={80} autoComplete="name" />
+      </div>
+
+      <div>
         <Label htmlFor="email">Correo</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
       </div>
