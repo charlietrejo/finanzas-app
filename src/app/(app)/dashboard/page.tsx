@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedAmount } from "@/components/ui/animated-amount";
-import { formatMXN } from "@/lib/format";
+import { formatMXN, formatDate } from "@/lib/format";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/constants/account-types";
 import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
 import { getCurrentMonth, formatTodayLabel } from "@/lib/date-utils";
@@ -11,6 +11,16 @@ import { getBudgetStatus } from "@/lib/budget-status";
 import { getUpcomingPayments } from "@/lib/upcoming-payments";
 import { CalendarClock } from "lucide-react";
 import type { Account, Budget, Debt, Goal, Transaction } from "@/types/database";
+
+interface RecentTransactionRow {
+  id: string;
+  type: "income" | "expense" | "transfer";
+  amount: number;
+  date: string;
+  account: { name: string } | null;
+  debt: { name: string } | null;
+  category: { name: string } | null;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -25,6 +35,7 @@ export default async function DashboardPage() {
     { data: debts },
     { data: recurringTransactions },
     { data: goals },
+    { data: recentTransactions },
     spentByCategory,
   ] = await Promise.all([
     supabase.auth.getUser(),
@@ -33,6 +44,17 @@ export default async function DashboardPage() {
     supabase.from("debts").select("*").is("archived_at", null),
     supabase.from("transactions").select("*").eq("is_recurring", true),
     supabase.from("goals").select("*"),
+    // Sección 3.4.1 del doc ("Últimos movimientos"): solo ingreso/gasto (no
+    // transferencias), las 5 más recientes.
+    supabase
+      .from("transactions")
+      .select(
+        "id, type, amount, date, account:accounts!transactions_account_id_fkey(name), debt:debts(name), category:categories(name)"
+      )
+      .in("type", ["income", "expense"])
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(5),
     getExpenseTotalsByCategory(supabase, month),
   ]);
 
@@ -58,6 +80,8 @@ export default async function DashboardPage() {
 
   const goalList = (goals ?? []) as Goal[];
   const goalsCompleted = goalList.filter((g) => g.current_amount >= g.target_amount).length;
+
+  const recentTransactionList = (recentTransactions ?? []) as unknown as RecentTransactionRow[];
 
   const upcomingPayments = getUpcomingPayments({
     debts: debtList,
@@ -118,6 +142,38 @@ export default async function DashboardPage() {
             <Link href="/debts" className="mt-2 inline-block text-sm font-medium text-violet-text">
               Ver deudas
             </Link>
+          </Card>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-ink">Últimos movimientos</h2>
+          <Link href="/transactions" className="text-sm font-medium text-violet-text">
+            Ver todos
+          </Link>
+        </div>
+
+        {recentTransactionList.length === 0 ? (
+          <Card>
+            <p className="text-sm text-slate">Aún no tienes movimientos registrados.</p>
+          </Card>
+        ) : (
+          <Card className="flex flex-col gap-3">
+            {recentTransactionList.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-ink">{t.category?.name ?? "Sin categoría"}</p>
+                  <p className="truncate text-xs text-slate">
+                    {formatDate(t.date)} · {t.account?.name ?? t.debt?.name ?? "—"}
+                  </p>
+                </div>
+                <p className={`shrink-0 font-medium ${t.type === "income" ? "text-emerald-700 dark:text-emerald-400" : "text-ink"}`}>
+                  {t.type === "income" ? "+" : "-"}
+                  {formatMXN(t.amount)}
+                </p>
+              </div>
+            ))}
           </Card>
         )}
       </div>
