@@ -10,20 +10,27 @@ import { getCurrentMonth, formatTodayLabel } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
 import { getUpcomingPayments } from "@/lib/upcoming-payments";
 import { CalendarClock } from "lucide-react";
-import type { Account, Budget, Debt, Transaction } from "@/types/database";
+import type { Account, Budget, Debt, Goal, Transaction } from "@/types/database";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const month = getCurrentMonth();
 
-  const [{ data: accounts }, { data: budgets }, { data: debts }, { data: recurringTransactions }, spentByCategory] =
-    await Promise.all([
-      supabase.from("accounts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
-      supabase.from("budgets").select("*").eq("month", `${month}-01`),
-      supabase.from("debts").select("*").is("archived_at", null),
-      supabase.from("transactions").select("*").eq("is_recurring", true),
-      getExpenseTotalsByCategory(supabase, month),
-    ]);
+  const [
+    { data: accounts },
+    { data: budgets },
+    { data: debts },
+    { data: recurringTransactions },
+    { data: goals },
+    spentByCategory,
+  ] = await Promise.all([
+    supabase.from("accounts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
+    supabase.from("budgets").select("*").eq("month", `${month}-01`),
+    supabase.from("debts").select("*").is("archived_at", null),
+    supabase.from("transactions").select("*").eq("is_recurring", true),
+    supabase.from("goals").select("*"),
+    getExpenseTotalsByCategory(supabase, month),
+  ]);
 
   const list = (accounts ?? []) as Account[];
   const totalBalance = list.reduce((sum, a) => sum + a.current_balance, 0);
@@ -39,6 +46,9 @@ export default async function DashboardPage() {
     const status = getBudgetStatus(spentByCategory[b.category_id] ?? 0, b.amount_limit, b.alert_threshold_pct);
     return status !== "ok";
   }).length;
+
+  const goalList = (goals ?? []) as Goal[];
+  const goalsCompleted = goalList.filter((g) => g.current_amount >= g.target_amount).length;
 
   const upcomingPayments = getUpcomingPayments({
     debts: debtList,
@@ -58,7 +68,22 @@ export default async function DashboardPage() {
           <p className="mt-2 text-3xl font-light text-ink">
             <AnimatedAmount value={totalBalance} />
           </p>
+          <Link href="/accounts" className="mt-2 inline-block text-sm font-medium text-violet-text">
+            Ver cuentas
+          </Link>
         </Card>
+
+        {goalList.length > 0 && (
+          <Card tone="periwinkle" className="w-full max-w-sm">
+            <p className="text-sm font-medium text-slate">Metas de ahorro</p>
+            <p className="mt-2 text-3xl font-light text-ink">
+              {goalsCompleted > 0 ? `${goalsCompleted} de ${goalList.length} cumplidas` : `${goalList.length} en progreso`}
+            </p>
+            <Link href="/goals" className="mt-2 inline-block text-sm font-medium text-violet-text">
+              Ver metas
+            </Link>
+          </Card>
+        )}
 
         {budgetList.length > 0 && (
           <Card tone={overOrWarningCount > 0 ? "apricot" : "mint"} className="w-full max-w-sm">

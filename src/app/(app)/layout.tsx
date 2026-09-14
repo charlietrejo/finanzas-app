@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { blobatar } from "blobatar";
 import { createClient } from "@/lib/supabase/server";
 import { NavLinks } from "@/components/navigation/nav-links";
+import { MobileNavBar } from "@/components/navigation/mobile-nav-bar";
 import { RouteFade } from "@/components/navigation/route-fade";
 import { IosInstallHint } from "@/components/pwa/ios-install-hint";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { User } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -22,24 +23,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const themeCookie = cookieStore.get("theme")?.value;
   const initialTheme = themeCookie === "dark" ? "dark" : "light";
 
+  const seed = user.email ?? user.id;
+  const avatarDesktop = blobatar(seed, { size: 36, background: "circle" });
+  const avatarMobile = blobatar(seed, { size: 32, background: "circle" });
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-cloud md:flex-row">
       <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-pebble bg-snow p-6 md:flex print:hidden">
         <div>
-          <p className="mb-8 text-xl font-light text-ink">Finanzas</p>
-          <NavLinks orientation="vertical" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="truncate text-xs text-slate">{user.email}</p>
-          <div className="flex items-center justify-between">
+          <div className="mb-8 flex items-center justify-between">
+            <p className="text-xl font-light text-ink">Finanzas</p>
+            {/* Sección 3.6.1/3.7 del doc: avatar (blobatar, determinístico
+                por email) en la esquina superior de todas las pantallas —
+                abre Cuenta. */}
             <Link
               href="/profile"
-              className="flex items-center gap-2 rounded-badge px-4 py-2.5 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
-            >
-              <User size={16} /> Cuenta
-            </Link>
-            <ThemeToggle initialTheme={initialTheme} />
+              aria-label="Cuenta"
+              className="shrink-0 overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+              dangerouslySetInnerHTML={{ __html: avatarDesktop }}
+            />
           </div>
+          <NavLinks />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs text-slate">{user.email}</p>
+          <ThemeToggle initialTheme={initialTheme} />
         </div>
       </aside>
 
@@ -53,9 +61,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <ThemeToggle initialTheme={initialTheme} />
             <Link
               href="/profile"
-              className="flex h-11 items-center gap-1.5 rounded-badge px-3 text-sm text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+              aria-label="Cuenta"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
             >
-              <User size={18} /> Cuenta
+              <span className="overflow-hidden rounded-full" dangerouslySetInnerHTML={{ __html: avatarMobile }} />
             </Link>
           </div>
         </header>
@@ -71,7 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden print:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <NavLinks orientation="horizontal" />
+        <MobileNavBar />
       </div>
     </div>
   );

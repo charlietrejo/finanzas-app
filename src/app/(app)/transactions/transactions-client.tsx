@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2, X, Repeat } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,8 +48,23 @@ const RECURRING_FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
 
 export function TransactionsClient({ transactions, accounts, creditCards, categories: initialCategories, merchants }: Props) {
   const [categories, setCategories] = useState(initialCategories);
-  const [creating, setCreating] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Sección 3.6.1 del doc: el botón central "+" del menú inferior enlaza a
+  // /transactions?new=1 para abrir el formulario directo, sin pantalla
+  // intermedia — inicializador perezoso, no un efecto que llame setState
+  // (evita el cascading render que marca react-hooks/set-state-in-effect).
+  const [creating, setCreating] = useState(() => searchParams.get("new") === "1");
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // La limpieza de la URL sí es un efecto legítimo (sincroniza con el
+  // router, un sistema externo) — no llama setState, así que no dispara esa
+  // regla; solo evita que un refresh reabra el formulario solo.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      router.replace("/transactions");
+    }
+  }, [searchParams, router]);
 
   const addCategory = (category: Category) => setCategories((prev) => [...prev, category]);
 

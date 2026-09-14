@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { blobatar } from "blobatar";
-import { Pencil, Trash2, X, Plus, Download, Check } from "lucide-react";
+import { Pencil, Trash2, X, Plus, Download, Check, ArrowLeftRight, PiggyBank, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -48,6 +49,8 @@ export function ProfileClient({
     <div className="flex flex-col gap-6 animate-fade-in">
       <h1 className="text-2xl font-light text-ink md:text-3xl">Cuenta</h1>
 
+      <ShortcutsSection />
+
       <ProfileHeader email={email} fullName={fullName} avatarSvg={avatarSvg} />
 
       <Card className="flex items-center justify-between gap-4">
@@ -77,6 +80,36 @@ export function ProfileClient({
       </Card>
 
       <p className="text-center text-xs text-slate">Finanzas v{appVersion}</p>
+    </div>
+  );
+}
+
+const SHORTCUTS = [
+  { href: "/transactions", label: "Movimientos", icon: ArrowLeftRight },
+  { href: "/budgets", label: "Presupuestos", icon: PiggyBank },
+  { href: "/goals", label: "Metas", icon: Target },
+];
+
+/**
+ * Sección 3.6.1/3.7 del doc: desde que estas pantallas perdieron su ícono
+ * propio en el menú inferior, quedan a 2 toques (avatar → acceso) en vez de
+ * perdidas — por eso van al inicio, antes de las secciones de perfil.
+ */
+function ShortcutsSection() {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {SHORTCUTS.map(({ href, label, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className="flex flex-col items-center gap-2 rounded-card bg-snow p-4 text-center shadow-[var(--shadow-card)] transition-[background-color,box-shadow] duration-200 hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-periwinkle text-violet-text">
+            <Icon size={20} />
+          </span>
+          <span className="text-xs font-medium text-ink">{label}</span>
+        </Link>
+      ))}
     </div>
   );
 }
