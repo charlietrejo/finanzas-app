@@ -5,6 +5,8 @@ import { getMonthRange } from "@/lib/date-utils";
 /**
  * Suma los gastos (type=expense) por categoría dentro de un mes, para
  * comparar presupuestado vs. real (sección 3.3 del doc de requerimientos).
+ * Excluye is_adjustment=true (sección 3.1): un ajuste de saldo no debe
+ * contar contra el presupuesto de ninguna categoría.
  * Se calcula en JS a partir de las transacciones del mes en vez de una vista
  * SQL: el volumen esperado por usuario es bajo y evita otra migración.
  */
@@ -18,6 +20,7 @@ export async function getExpenseTotalsByCategory(
     .from("transactions")
     .select("category_id, amount")
     .eq("type", "expense")
+    .eq("is_adjustment", false)
     .gte("date", start)
     .lt("date", end);
 

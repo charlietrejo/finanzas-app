@@ -18,6 +18,7 @@ interface TransactionLike {
   type: "income" | "expense" | "transfer";
   amount: number;
   category_id: string | null;
+  is_adjustment: boolean;
 }
 
 interface CategoryLike {
@@ -30,7 +31,9 @@ export function computeMonthlyInsights(
   categories: CategoryLike[]
 ): MonthlyInsights {
   const essentialCategoryIds = new Set(categories.filter((c) => c.is_essential).map((c) => c.id));
-  const expenses = transactions.filter((t) => t.type === "expense");
+  // Sección 3.1 del doc: un ajuste de saldo no es una compra/ingreso real —
+  // se excluye de los 3 cortes de este módulo (total, esenciales, hormiga).
+  const expenses = transactions.filter((t) => t.type === "expense" && !t.is_adjustment);
 
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
 

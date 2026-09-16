@@ -153,6 +153,10 @@ export type Transaction = {
   date: string;
   note: string | null;
   tags: string[];
+  // Sección 3.1 del doc ("Ajustar saldo"): true solo en el movimiento que
+  // crea adjust_account_balance — se excluye de gasto hormiga, gastos
+  // esenciales/no esenciales y presupuestos, pero sí afecta current_balance.
+  is_adjustment: boolean;
   is_recurring: boolean;
   // Los 3 solo se llenan si is_recurring; recurring_interval_days solo si
   // recurring_frequency="custom". El ancla de la recurrencia es `date`
@@ -208,10 +212,11 @@ export interface Database {
       };
       transactions: {
         Row: Transaction;
-        Insert: Omit<Transaction, "id" | "user_id" | "created_at"> & {
+        Insert: Omit<Transaction, "id" | "user_id" | "created_at" | "is_adjustment"> & {
           id?: string;
           user_id?: string;
           created_at?: string;
+          is_adjustment?: boolean;
         };
         Update: Partial<Omit<Transaction, "id" | "user_id">>;
         Relationships: [];
@@ -422,6 +427,14 @@ export interface Database {
           p_note?: string | null;
         };
         Returns: LoanRepayment;
+      };
+      // Sección 3.1 del doc (023_account_balance_adjustment.sql).
+      adjust_account_balance: {
+        Args: {
+          p_account_id: string;
+          p_real_balance: number;
+        };
+        Returns: Transaction;
       };
     };
   };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Orquesta los 6 scripts de verificación de integración (scripts/verify-*.mjs,
+ * Orquesta los scripts de verificación de integración (scripts/verify-*.mjs,
  * excepto este mismo) en un solo comando: crea dos usuarios de prueba
  * temporales directo por SQL (mismo mecanismo usado desde Fase 3 para
  * evitar el rate-limit de envío de correo de Supabase), corre cada script
@@ -96,6 +96,10 @@ const SUITES = [
   { name: "verify-goal-contribution-rpc.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
   { name: "verify-reports-data.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
   { name: "verify-loans-given.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
+  {
+    name: "verify-account-balance-adjustment.mjs",
+    env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }),
+  },
   {
     name: "verify-cross-user-isolation.mjs",
     env: () => ({

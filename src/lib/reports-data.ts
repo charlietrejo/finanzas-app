@@ -31,7 +31,7 @@ export async function getReportsData(
       supabase
         .from("transactions")
         .select(
-          "type, amount, date, category_id, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, next_occurrence_date"
+          "type, amount, date, category_id, is_adjustment, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, next_occurrence_date"
         ),
       // Sección 3.4.2 del doc: transaction.date/amount son el origen y monto
       // TOTAL prestado (inmutables); loan_repayments trae cada cobro con su

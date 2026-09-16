@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Scale } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatMXN } from "@/lib/format";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants/account-types";
 import { MEXICAN_BANKS } from "@/lib/constants/banks";
-import { createAccount, deleteAccount, updateAccount, type ActionState } from "./actions";
+import { adjustAccountBalance, createAccount, deleteAccount, updateAccount, type ActionState } from "./actions";
 import type { Account, AccountType } from "@/types/database";
 
 export function AccountsClient({ accounts }: { accounts: Account[] }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
@@ -42,6 +43,12 @@ export function AccountsClient({ accounts }: { accounts: Account[] }) {
                 account={account}
                 onDone={() => setEditingId(null)}
               />
+            ) : adjustingId === account.id ? (
+              <AdjustBalanceForm
+                key={account.id}
+                account={account}
+                onDone={() => setAdjustingId(null)}
+              />
             ) : (
               <Card key={account.id} className="flex flex-col gap-3">
                 <div className="flex items-start justify-between">
@@ -53,6 +60,13 @@ export function AccountsClient({ accounts }: { accounts: Account[] }) {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    <button
+                      aria-label="Ajustar saldo"
+                      onClick={() => setAdjustingId(account.id)}
+                      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+                    >
+                      <Scale size={16} />
+                    </button>
                     <button
                       aria-label="Editar cuenta"
                       onClick={() => setEditingId(account.id)}
@@ -197,6 +211,66 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando..." : "Guardar"}
+          </Button>
+          <Button type="button" variant="outline" onClick={onDone}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+/**
+ * Sección 3.1 del doc ("Ajustar saldo — reconciliación manual"): el usuario
+ * captura el saldo real que ve en su banco; adjust_account_balance calcula
+ * la diferencia contra el saldo calculado y crea el movimiento de ajuste.
+ */
+function AdjustBalanceForm({ account, onDone }: { account: Account; onDone: () => void }) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    async (prev, formData) => {
+      const result = await adjustAccountBalance(account.id, prev, formData);
+      if (!result) onDone();
+      return result;
+    },
+    null
+  );
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-medium text-ink">Ajustar saldo — {account.name}</h2>
+        <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
+          <X size={18} />
+        </button>
+      </div>
+      <p className="text-sm text-slate">
+        Saldo calculado actual: <span className="font-medium text-ink">{formatMXN(account.current_balance)}</span>
+      </p>
+      <form action={formAction} className="flex flex-col gap-4">
+        <div>
+          <Label htmlFor="real_balance">Saldo real (según tu banco)</Label>
+          <Input
+            id="real_balance"
+            name="real_balance"
+            type="number"
+            step="0.01"
+            min="0"
+            required
+            defaultValue={account.current_balance}
+          />
+        </div>
+
+        <p className="text-xs text-slate">
+          Se creará un movimiento de ajuste (ingreso o gasto, según la diferencia) con la categoría
+          &quot;Ajuste de saldo&quot;, para que el saldo de la cuenta quede igual al que capturaste.
+        </p>
+
+        {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
+
+        <div className="flex gap-2">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Guardando..." : "Ajustar"}
           </Button>
           <Button type="button" variant="outline" onClick={onDone}>
             Cancelar

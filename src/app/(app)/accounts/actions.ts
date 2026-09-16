@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAccountSchema, updateAccountSchema } from "@/lib/validations/account";
+import { adjustAccountBalanceSchema, createAccountSchema, updateAccountSchema } from "@/lib/validations/account";
 
 export type ActionState = { error?: string } | null;
 
@@ -69,6 +69,42 @@ export async function updateAccount(
 
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
+  return null;
+}
+
+/**
+ * Sección 3.1 del doc ("Ajustar saldo — reconciliación manual"):
+ * adjust_account_balance (023_account_balance_adjustment.sql) calcula la
+ * diferencia contra el saldo actual y crea el movimiento de ajuste
+ * (is_adjustment=true) de forma atómica.
+ */
+export async function adjustAccountBalance(
+  id: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = adjustAccountBalanceSchema.safeParse({
+    real_balance: formData.get("real_balance"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("adjust_account_balance", {
+    p_account_id: id,
+    p_real_balance: parsed.data.real_balance,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/reports");
+  revalidatePath("/budgets");
   return null;
 }
 
