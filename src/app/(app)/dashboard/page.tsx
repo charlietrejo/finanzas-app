@@ -9,7 +9,7 @@ import { getExpenseTotalsByCategory } from "@/lib/budgets-data";
 import { getCurrentMonth, formatTodayLabel } from "@/lib/date-utils";
 import { getBudgetStatus } from "@/lib/budget-status";
 import { getUpcomingPayments } from "@/lib/upcoming-payments";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, HandCoins } from "lucide-react";
 import type { Account, Budget, Debt, Goal, Transaction } from "@/types/database";
 
 interface RecentTransactionRow {
@@ -21,6 +21,15 @@ interface RecentTransactionRow {
   debt: { name: string } | null;
   category: { name: string } | null;
 }
+
+interface LoanAlertRow {
+  id: string;
+  borrower_name: string;
+  expected_return_date: string | null;
+  current_balance: number;
+}
+
+const DAYS_WINDOW = 7;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -35,6 +44,7 @@ export default async function DashboardPage() {
     { data: debts },
     { data: recurringTransactions },
     { data: goals },
+    { data: activeLoans },
     { data: recentTransactions },
     spentByCategory,
   ] = await Promise.all([
@@ -44,6 +54,9 @@ export default async function DashboardPage() {
     supabase.from("debts").select("*").is("archived_at", null),
     supabase.from("transactions").select("*").eq("is_recurring", true),
     supabase.from("goals").select("*"),
+    // Sección 3.4.2 del doc: préstamos otorgados activos, para el
+    // tratamiento especial en la zona de alertas (más abajo).
+    supabase.from("loans_given").select("id, borrower_name, expected_return_date, current_balance").eq("status", "active"),
     // Sección 3.4.1 del doc ("Últimos movimientos"): solo ingreso/gasto (no
     // transferencias), las 5 más recientes.
     supabase
@@ -87,6 +100,21 @@ export default async function DashboardPage() {
     debts: debtList,
     recurringTransactions: (recurringTransactions ?? []) as Transaction[],
   });
+
+  // Sección 3.4.1 del doc: tratamiento especial de préstamos otorgados —
+  // con fecha, solo si está próxima (mismo criterio que el resto de
+  // alertas); sin fecha, se muestran SIEMPRE, sin depender de la ventana de
+  // "próximos N días" (quedarían fuera para siempre si dependieran de ella).
+  const todayMidnight = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+  const loanAlerts = ((activeLoans ?? []) as LoanAlertRow[])
+    .map((l) => {
+      if (!l.expected_return_date) return { ...l, daysUntil: null };
+      const [y, m, d] = l.expected_return_date.slice(0, 10).split("-").map(Number);
+      const daysUntil = Math.round((Date.UTC(y, m - 1, d) - todayMidnight) / 86_400_000);
+      return { ...l, daysUntil };
+    })
+    .filter((l) => l.daysUntil === null || l.daysUntil <= DAYS_WINDOW)
+    .sort((a, b) => (a.daysUntil ?? -1) - (b.daysUntil ?? -1));
 
   return (
     <div className="flex flex-col gap-8 animate-fade-in">
@@ -177,6 +205,35 @@ export default async function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {loanAlerts.length > 0 && (
+        <Card tone="lavender" className="border-l-4 border-monday-violet">
+          <div className="mb-3 flex items-center gap-2">
+            <HandCoins size={22} className="text-monday-violet" />
+            <p className="text-lg font-medium text-ink">Préstamos por cobrar</p>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {loanAlerts.map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-lg font-medium text-ink">{l.borrower_name}</p>
+                  <p className="text-sm text-slate">{formatMXN(l.current_balance)} pendientes</p>
+                </div>
+                {l.daysUntil === null ? (
+                  <Badge tone="info">Sin fecha</Badge>
+                ) : (
+                  <Badge tone={l.daysUntil <= 2 ? "danger" : "warning"}>
+                    {l.daysUntil <= 0 ? "Vence hoy" : l.daysUntil === 1 ? "Vence mañana" : `Vence en ${l.daysUntil} días`}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Link href="/loans" className="mt-3 inline-block text-sm font-medium text-violet-text">
+            Ver préstamos
+          </Link>
+        </Card>
+      )}
 
       {upcomingPayments.length > 0 && (
         <Card tone="apricot">

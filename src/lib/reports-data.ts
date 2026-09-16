@@ -20,7 +20,7 @@ export async function getReportsData(
   supabase: SupabaseClient<Database>,
   months: number
 ): Promise<ReportsData> {
-  const [{ data: accounts }, { data: debts }, { data: categories }, { data: allTransactions }] =
+  const [{ data: accounts }, { data: debts }, { data: categories }, { data: allTransactions }, { data: loansGivenRaw }] =
     await Promise.all([
       supabase.from("accounts").select("initial_balance, created_at"),
       supabase.from("debts").select("principal, created_at"),
@@ -30,9 +30,26 @@ export async function getReportsData(
         .select(
           "type, amount, date, category_id, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, next_occurrence_date"
         ),
+      // Sección 3.4.2 del doc: transaction.date/amount son el origen y monto
+      // TOTAL prestado (inmutables); loan_repayments trae cada cobro con su
+      // fecha para poder reconstruir el saldo pendiente en cada mes histórico.
+      supabase
+        .from("loans_given")
+        .select("transaction:transactions(date, amount), loan_repayments(amount, date)"),
     ]);
 
   const transactions = allTransactions ?? [];
+  const loansGivenRows = (loansGivenRaw ?? []) as unknown as {
+    transaction: { date: string; amount: number } | null;
+    loan_repayments: { amount: number; date: string }[];
+  }[];
+  const loansGiven = loansGivenRows
+    .filter((l) => l.transaction)
+    .map((l) => ({
+      originalAmount: l.transaction!.amount,
+      date: l.transaction!.date,
+      repayments: l.loan_repayments ?? [],
+    }));
 
   const cashFlow = computeMonthlyCashFlow(transactions, months);
   const categoryDistribution = computeCategoryDistribution(transactions, categories ?? []);
@@ -40,6 +57,7 @@ export async function getReportsData(
     accounts: accounts ?? [],
     debts: debts ?? [],
     transactions,
+    loansGiven,
     months,
   });
   const netWorth = projectNetWorth(netWorthHistory, transactions, 6);

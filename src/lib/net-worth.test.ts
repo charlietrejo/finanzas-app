@@ -47,6 +47,53 @@ describe("computeNetWorthSeries", () => {
     });
     expect(result[0].netWorth).toBe(500);
   });
+
+  it("sección 3.4.2: suma el saldo pendiente de préstamos otorgados como activo", () => {
+    const result = computeNetWorthSeries({
+      accounts: [{ initial_balance: 1000, created_at: "2026-01-01T00:00:00Z" }],
+      debts: [],
+      // El préstamo de 300 ya está restado aquí como cualquier gasto normal.
+      transactions: [{ type: "expense", amount: 300, date: "2026-01-10" }],
+      loansGiven: [{ originalAmount: 300, date: "2026-01-10", repayments: [] }],
+      months: 2,
+      endMonth: "2026-02",
+    });
+
+    // Sin el ajuste, enero daría 1000 - 300 = 700 (como si el dinero se
+    // hubiera perdido). Con el ajuste, el préstamo pendiente se suma de
+    // vuelta como activo: 700 + 300 = 1000 — el patrimonio no cambia solo
+    // por prestar dinero, solo cambia de forma (efectivo -> por cobrar).
+    expect(result[0].netWorth).toBe(1000);
+
+    // Cobro parcial de 100 en febrero: quedan 200 pendientes.
+    const withPartialRepayment = computeNetWorthSeries({
+      accounts: [{ initial_balance: 1000, created_at: "2026-01-01T00:00:00Z" }],
+      debts: [],
+      transactions: [
+        { type: "expense", amount: 300, date: "2026-01-10" },
+        { type: "income", amount: 100, date: "2026-02-05" },
+      ],
+      loansGiven: [{ originalAmount: 300, date: "2026-01-10", repayments: [{ amount: 100, date: "2026-02-05" }] }],
+      months: 2,
+      endMonth: "2026-02",
+    });
+    // 1000 + (-300 + 100) [cashFlow] + 200 [saldo pendiente] = 1000
+    expect(withPartialRepayment[1].netWorth).toBe(1000);
+  });
+
+  it("no cuenta un préstamo otorgado antes de que exista la transacción que lo originó", () => {
+    const result = computeNetWorthSeries({
+      accounts: [{ initial_balance: 1000, created_at: "2026-01-01T00:00:00Z" }],
+      debts: [],
+      transactions: [{ type: "expense", amount: 300, date: "2026-02-10" }],
+      loansGiven: [{ originalAmount: 300, date: "2026-02-10", repayments: [] }],
+      months: 2,
+      endMonth: "2026-02",
+    });
+
+    expect(result[0].netWorth).toBe(1000); // enero: el préstamo todavía no existía
+    expect(result[1].netWorth).toBe(1000); // febrero: -300 del gasto + 300 pendiente
+  });
 });
 
 /** Fábrica con los defaults de una transacción no recurrente, para no repetir los 5 campos de recurrencia en cada caso. */

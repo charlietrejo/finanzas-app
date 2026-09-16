@@ -95,6 +95,7 @@ const SUITES = [
   { name: "verify-debt-payment-rpc.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
   { name: "verify-goal-contribution-rpc.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
   { name: "verify-reports-data.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
+  { name: "verify-loans-given.mjs", env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }) },
   {
     name: "verify-cross-user-isolation.mjs",
     env: () => ({

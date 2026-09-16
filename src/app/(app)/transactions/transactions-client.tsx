@@ -14,6 +14,7 @@ import {
   deleteTransaction,
   updateTransaction,
   createCategory,
+  createLoanGiven,
   type ActionState,
 } from "./actions";
 import type { Account, Category, Debt, Merchant, RecurringFrequency, TransactionType } from "@/types/database";
@@ -250,12 +251,21 @@ function TransactionForm({
     [categories, type]
   );
 
+  // Sección 3.4.2 del doc: "Préstamo" es una categoría especial — se
+  // identifica por nombre (igual que la sugerencia de categoría por
+  // comercio, más abajo) porque categories no tiene un flag "especial"
+  // propio. Solo aplica al CREAR (no al editar un movimiento ya existente:
+  // esta pantalla no reconvierte un gasto normal en préstamo a medio camino).
+  const isNewLoan = !isEdit && type === "expense" && categories.find((c) => c.id === categoryId)?.name === "Préstamo";
+
   const action = isEdit
     ? (updateTransaction as (id: string, prev: ActionState, fd: FormData) => Promise<ActionState>).bind(
         null,
         transaction!.id
       )
-    : createTransaction;
+    : isNewLoan
+      ? createLoanGiven
+      : createTransaction;
 
   const [state, formAction, pending] = useActionState<ActionState, FormData>(async (prev, fd) => {
     const result = await action(prev, fd);
@@ -453,6 +463,19 @@ function TransactionForm({
                 </option>
               ))}
             </Select>
+          </div>
+        )}
+
+        {isNewLoan && (
+          <div className="grid grid-cols-1 gap-4 rounded-card bg-cloud p-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="borrower_name">¿A quién le prestas?</Label>
+              <Input id="borrower_name" name="borrower_name" required maxLength={120} placeholder="Nombre" />
+            </div>
+            <div>
+              <Label htmlFor="expected_return_date">Fecha esperada de devolución (opcional)</Label>
+              <Input id="expected_return_date" name="expected_return_date" type="date" />
+            </div>
           </div>
         )}
 

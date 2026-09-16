@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { transactionFormSchema } from "@/lib/validations/transaction";
+import { transactionFormSchema, loanGivenFormSchema } from "@/lib/validations/transaction";
 import { advanceRecurringDate } from "@/lib/recurring";
 import type { TransactionFormValues } from "@/lib/validations/transaction";
 
@@ -137,6 +137,53 @@ export async function deleteTransaction(id: string) {
   revalidatePath("/dashboard");
   revalidatePath("/accounts");
   revalidatePath("/debts");
+  return null;
+}
+
+/**
+ * Sección 3.4.2 del doc: cuando la categoría elegida en el formulario de
+ * movimientos es "Préstamo", el submit pasa por aquí en vez de
+ * createTransaction — crea el gasto normal Y el registro en loans_given de
+ * forma atómica (create_loan_given, 021_loans_given.sql).
+ */
+export async function createLoanGiven(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { account_id, debt_id } = splitPayWith(formData.get("pay_with"));
+  const parsed = loanGivenFormSchema.safeParse({
+    account_id,
+    debt_id,
+    category_id: formData.get("category_id"),
+    amount: formData.get("amount"),
+    date: formData.get("date"),
+    borrower_name: formData.get("borrower_name"),
+    expected_return_date: formData.get("expected_return_date") || null,
+    note: formData.get("note") || null,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_loan_given", {
+    p_account_id: d.account_id ?? null,
+    p_debt_id: d.debt_id ?? null,
+    p_amount: d.amount,
+    p_date: d.date,
+    p_category_id: d.category_id,
+    p_borrower_name: d.borrower_name,
+    p_expected_return_date: d.expected_return_date ?? null,
+    p_note: d.note ?? null,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/accounts");
+  revalidatePath("/debts");
+  revalidatePath("/loans");
   return null;
 }
 

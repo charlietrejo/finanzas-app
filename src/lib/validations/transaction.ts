@@ -63,3 +63,34 @@ export const transactionFormSchema = z
   });
 
 export type TransactionFormValues = z.infer<typeof transactionFormSchema>;
+
+// Sección 3.4.2 del doc: la misma "cuenta o tarjeta, no ambas ni ninguna"
+// que un gasto normal (transactionFormSchema), más los dos campos que
+// dispara la categoría especial "Préstamo".
+export const loanGivenFormSchema = z
+  .object({
+    account_id: z.string().uuid().optional().nullable(),
+    debt_id: z.string().uuid().optional().nullable(),
+    category_id: z.string().uuid(),
+    amount: z.coerce.number().positive("El monto debe ser mayor a cero"),
+    date: z.string().min(1, "La fecha es obligatoria"),
+    borrower_name: z.string().trim().min(1, "Indica a quién se le prestó").max(120),
+    expected_return_date: z.string().optional().nullable(),
+    note: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => !!data.account_id !== !!data.debt_id, {
+    message: "Elige una cuenta o una tarjeta para el préstamo, no ambas ni ninguna",
+    path: ["account_id"],
+  });
+
+export type LoanGivenFormValues = z.infer<typeof loanGivenFormSchema>;
+
+export const loanRepaymentFormSchema = z.object({
+  loan_given_id: z.string().uuid(),
+  account_id: z.string().uuid(),
+  amount: z.coerce.number().positive("El monto debe ser mayor a cero"),
+  date: z.string().min(1, "La fecha es obligatoria"),
+  note: z.string().max(500).optional().nullable(),
+});
+
+export type LoanRepaymentFormValues = z.infer<typeof loanRepaymentFormSchema>;

@@ -24,6 +24,17 @@ interface TransactionLike {
   date: string;
 }
 
+// Sección 3.4.2 del doc: `date`/`originalAmount` son los de la transacción de
+// gasto ORIGINAL que dio origen al préstamo (inmutables), no current_balance
+// (que ya viene descontado por los cobros — para reconstruir el saldo
+// pendiente EN CADA MES histórico hace falta el monto original y la fecha de
+// cada cobro, no el saldo ya reducido de hoy).
+interface LoanGivenLike {
+  originalAmount: number;
+  date: string;
+  repayments: { amount: number; date: string }[];
+}
+
 /**
  * Patrimonio neto histórico (sección 3.6). Fórmula simplificada (ver plan de
  * Fase 4): pagos de deuda y aportaciones a metas se cancelan algebraicamente
@@ -31,20 +42,29 @@ interface TransactionLike {
  * así que solo hacen falta accounts.initial_balance, debts.principal y las
  * transacciones de ingreso/gasto — nada de debt_payments ni goal_contributions.
  *
+ * Préstamos otorgados (sección 3.4.2) sí se suman aparte como activo: el
+ * gasto que los origina YA está restado en cashFlow (como cualquier otro
+ * gasto), lo que sin este ajuste subestima el patrimonio mientras el
+ * préstamo sigue vigente — como si el dinero prestado hubiera desaparecido
+ * en vez de ser un cobro pendiente.
+ *
  *   netWorth(T) = Σ(initial_balance, cuentas creadas ≤ T)
  *               + Σ(ingresos, fecha ≤ T) − Σ(gastos, fecha ≤ T)
  *               − Σ(principal, deudas creadas ≤ T)
+ *               + Σ(saldo pendiente de préstamos otorgados con fecha ≤ T)
  */
 export function computeNetWorthSeries({
   accounts,
   debts,
   transactions,
+  loansGiven = [],
   months,
   endMonth,
 }: {
   accounts: AccountLike[];
   debts: DebtLike[];
   transactions: TransactionLike[];
+  loansGiven?: LoanGivenLike[];
   months: number;
   endMonth?: string;
 }): NetWorthPoint[] {
@@ -69,9 +89,16 @@ export function computeNetWorthSeries({
         return sum;
       }, 0);
 
+    const loansGivenOutstanding = loansGiven
+      .filter((l) => l.date < end)
+      .reduce((sum, l) => {
+        const repaid = l.repayments.filter((r) => r.date < end).reduce((s, r) => s + r.amount, 0);
+        return sum + Math.max(0, l.originalAmount - repaid);
+      }, 0);
+
     return {
       month,
-      netWorth: assetsBase + cashFlow - debtsBase,
+      netWorth: assetsBase + cashFlow - debtsBase + loansGivenOutstanding,
       projected: false,
     };
   });

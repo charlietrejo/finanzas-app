@@ -15,6 +15,7 @@
     "verify:reports": "node --env-file=.env.local scripts/verify-reports-data.mjs",
     "verify:isolation": "node --env-file=.env.local scripts/verify-cross-user-isolation.mjs",
     "verify:recurring": "node --env-file=.env.local scripts/verify-recurring-cron.mjs",
+    "verify:loans": "node --env-file=.env.local scripts/verify-loans-given.mjs",
     "verify:all": "node --env-file=.env.local scripts/verify-all.mjs",
     "perf:test": "node --env-file=.env.local scripts/perf-test.mjs"
   },

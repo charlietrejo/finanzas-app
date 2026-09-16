@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { blobatar } from "blobatar";
-import { Pencil, Trash2, X, Plus, Download, Check, ArrowLeftRight, PiggyBank, Target } from "lucide-react";
+import { Pencil, Trash2, X, Plus, Download, Check, ArrowLeftRight, PiggyBank, Target, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -88,6 +88,7 @@ const SHORTCUTS = [
   { href: "/transactions", label: "Movimientos", icon: ArrowLeftRight },
   { href: "/budgets", label: "Presupuestos", icon: PiggyBank },
   { href: "/goals", label: "Metas", icon: Target },
+  { href: "/loans", label: "Préstamos", icon: HandCoins },
 ];
 
 /**
@@ -97,7 +98,7 @@ const SHORTCUTS = [
  */
 function ShortcutsSection() {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {SHORTCUTS.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}

@@ -107,6 +107,32 @@ export type GoalContribution = {
   created_at: string;
 };
 
+export type LoanStatus = "active" | "paid";
+
+// Sección 3.4.2 del doc: dinero que el usuario le presta a alguien más —
+// opuesto a `debts`. transaction_id es la transacción de gasto original que
+// lo originó (su `date`/`amount` son el origen y el monto total prestado).
+export type LoanGiven = {
+  id: string;
+  user_id: string;
+  transaction_id: string;
+  borrower_name: string;
+  expected_return_date: string | null;
+  current_balance: number;
+  status: LoanStatus;
+  created_at: string;
+};
+
+export type LoanRepayment = {
+  id: string;
+  user_id: string;
+  loan_given_id: string;
+  transaction_id: string;
+  amount: number;
+  date: string;
+  created_at: string;
+};
+
 export type Transaction = {
   id: string;
   user_id: string;
@@ -259,6 +285,28 @@ export interface Database {
         Update: Partial<Omit<GoalContribution, "id" | "user_id">>;
         Relationships: [];
       };
+      loans_given: {
+        Row: LoanGiven;
+        Insert: Omit<LoanGiven, "id" | "user_id" | "created_at" | "status" | "expected_return_date"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          status?: LoanStatus;
+          expected_return_date?: string | null;
+        };
+        Update: Partial<Omit<LoanGiven, "id" | "user_id">>;
+        Relationships: [];
+      };
+      loan_repayments: {
+        Row: LoanRepayment;
+        Insert: Omit<LoanRepayment, "id" | "user_id" | "created_at"> & {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<LoanRepayment, "id" | "user_id">>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Enums: Record<string, never>;
@@ -345,6 +393,30 @@ export interface Database {
       delete_goal_contribution: {
         Args: { p_id: string };
         Returns: void;
+      };
+      // Sección 3.4.2 del doc (021_loans_given.sql).
+      create_loan_given: {
+        Args: {
+          p_account_id: string | null;
+          p_debt_id: string | null;
+          p_amount: number;
+          p_date: string;
+          p_category_id: string;
+          p_borrower_name: string;
+          p_expected_return_date?: string | null;
+          p_note?: string | null;
+        };
+        Returns: LoanGiven;
+      };
+      create_loan_repayment: {
+        Args: {
+          p_loan_given_id: string;
+          p_account_id: string;
+          p_amount: number;
+          p_date: string;
+          p_note?: string | null;
+        };
+        Returns: LoanRepayment;
       };
     };
   };
