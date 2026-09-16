@@ -208,15 +208,15 @@ export default async function DashboardPage() {
 
       {loanAlerts.length > 0 && (
         <Card tone="lavender" className="border-l-4 border-monday-violet">
-          <div className="mb-3 flex items-center gap-2">
-            <HandCoins size={22} className="text-monday-violet" />
+          <div className="mb-2 flex items-center gap-2">
+            <HandCoins size={18} className="text-monday-violet" />
             <p className="text-lg font-medium text-ink">Préstamos por cobrar</p>
           </div>
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {loanAlerts.map((l) => (
               <li key={l.id} className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-lg font-medium text-ink">{l.borrower_name}</p>
+                  <p className="text-sm font-medium text-ink">{l.borrower_name}</p>
                   <p className="text-sm text-slate">{formatMXN(l.current_balance)} pendientes</p>
                 </div>
                 {l.daysUntil === null ? (
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
         <Card tone="apricot">
           <div className="mb-2 flex items-center gap-2">
             <CalendarClock size={18} className="text-monday-violet" />
-            <p className="font-medium text-ink">Recordatorios de pago</p>
+            <p className="text-lg font-medium text-ink">Recordatorios de pago</p>
           </div>
           <ul className="flex flex-col gap-2">
             {upcomingPayments.map((p) => (

@@ -21,7 +21,7 @@ const ITEMS_RIGHT = [
 
 const FOCUS_RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet";
 const ITEM_CLASS =
-  "flex min-w-[64px] flex-1 shrink-0 flex-col items-center gap-1 px-1 py-2 text-[11px] leading-tight";
+  "flex min-w-[64px] flex-1 shrink-0 flex-col items-center gap-1 px-1 py-2 text-xs leading-tight";
 
 function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Wallet; active: boolean }) {
   return (
