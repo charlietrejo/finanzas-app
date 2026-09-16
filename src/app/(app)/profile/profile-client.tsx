@@ -224,8 +224,10 @@ function CategoriesSection({ categories: initialCategories }: { categories: Cate
                 key={c.id}
                 category={c}
                 onDone={() => setEditingId(null)}
-                onSaved={(name) =>
-                  setCategories((prev) => prev.map((x) => (x.id === c.id ? { ...x, name } : x)))
+                onSaved={(name, isEssential) =>
+                  setCategories((prev) =>
+                    prev.map((x) => (x.id === c.id ? { ...x, name, is_essential: isEssential } : x))
+                  )
                 }
               />
             ) : (
@@ -234,6 +236,7 @@ function CategoriesSection({ categories: initialCategories }: { categories: Cate
                   <Badge tone={c.type === "income" ? "success" : "warning"}>
                     {c.type === "income" ? "Ingreso" : "Gasto"}
                   </Badge>
+                  {c.type === "expense" && c.is_essential && <Badge tone="info">Esencial</Badge>}
                   <span className="truncate text-sm text-ink">{c.name}</span>
                 </div>
                 <div className="flex shrink-0 gap-1">
@@ -336,12 +339,13 @@ function EditCategoryRow({
 }: {
   category: Category;
   onDone: () => void;
-  onSaved: (name: string) => void;
+  onSaved: (name: string, isEssential: boolean) => void;
 }) {
+  const [isEssential, setIsEssential] = useState(category.is_essential);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(async (prev, fd) => {
     const result = await updateCategory(prev, fd);
     if (!result?.error) {
-      onSaved(String(fd.get("name") ?? "").trim());
+      onSaved(String(fd.get("name") ?? "").trim(), fd.get("is_essential") === "on");
       onDone();
     }
     return result;
@@ -349,23 +353,44 @@ function EditCategoryRow({
 
   return (
     <li className="rounded-badge bg-cloud px-2 py-2">
-      <form action={formAction} className="flex items-center gap-2">
+      <form action={formAction} className="flex flex-col gap-2">
         <input type="hidden" name="id" value={category.id} />
-        <Badge tone={category.type === "income" ? "success" : "warning"}>
-          {category.type === "income" ? "Ingreso" : "Gasto"}
-        </Badge>
-        <Input name="name" defaultValue={category.name} autoFocus className="flex-1" />
-        <Button type="submit" disabled={pending} aria-label="Guardar categoría">
-          <Check size={16} />
-        </Button>
-        <button
-          type="button"
-          onClick={onDone}
-          aria-label="Cancelar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <Badge tone={category.type === "income" ? "success" : "warning"}>
+            {category.type === "income" ? "Ingreso" : "Gasto"}
+          </Badge>
+          <Input name="name" defaultValue={category.name} autoFocus className="flex-1" />
+          <Button type="submit" disabled={pending} aria-label="Guardar categoría">
+            <Check size={16} />
+          </Button>
+          <button
+            type="button"
+            onClick={onDone}
+            aria-label="Cancelar"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Secciones 3.6/3.7/3.8: is_essential solo aplica a gasto — Reportes
+            filtra "Gastos esenciales del mes" por esto, no tiene sentido en
+            categorías de ingreso. */}
+        {category.type === "expense" && (
+          <div className="flex items-center gap-2 pl-1">
+            <input
+              id={`is_essential_${category.id}`}
+              name="is_essential"
+              type="checkbox"
+              checked={isEssential}
+              onChange={(e) => setIsEssential(e.target.checked)}
+              className="h-4 w-4 rounded border-mist text-monday-violet focus:ring-monday-violet"
+            />
+            <Label htmlFor={`is_essential_${category.id}`} className="mb-0">
+              Categoría esencial (renta, servicios, salud, etc.)
+            </Label>
+          </div>
+        )}
       </form>
       {state?.error && (
         <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">

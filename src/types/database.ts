@@ -33,6 +33,10 @@ export type Category = {
   type: CategoryType;
   icon: string | null;
   color: string | null;
+  // Secciones 3.6/3.7/3.8: solo tiene sentido semántico en type="expense"
+  // (Reportes/"Gastos esenciales del mes" filtra por gasto de todas formas);
+  // en categorías de ingreso se queda en su default (false), sin uso.
+  is_essential: boolean;
   created_at: string;
 };
 
@@ -180,13 +184,14 @@ export interface Database {
       };
       categories: {
         Row: Category;
-        Insert: Omit<Category, "id" | "user_id" | "created_at" | "parent_id" | "icon" | "color"> & {
+        Insert: Omit<Category, "id" | "user_id" | "created_at" | "parent_id" | "icon" | "color" | "is_essential"> & {
           id?: string;
           user_id?: string;
           created_at?: string;
           parent_id?: string | null;
           icon?: string | null;
           color?: string | null;
+          is_essential?: boolean;
         };
         Update: Partial<Omit<Category, "id" | "user_id">>;
         Relationships: [];

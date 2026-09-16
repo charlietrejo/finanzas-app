@@ -50,14 +50,19 @@ export async function updateCategory(_prev: ActionState, formData: FormData): Pr
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   if (name.length === 0) return { error: "El nombre no puede estar vacío" };
+  // Secciones 3.6/3.7/3.8: el checkbox solo se renderiza para categorías de
+  // gasto (ver profile-client.tsx) — en una de ingreso llega ausente, que
+  // aquí se lee como false, su default y único valor con sentido para ese tipo.
+  const isEssential = formData.get("is_essential") === "on";
 
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").update({ name }).eq("id", id);
+  const { error } = await supabase.from("categories").update({ name, is_essential: isEssential }).eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
   revalidatePath("/transactions");
   revalidatePath("/budgets");
+  revalidatePath("/reports");
   return { success: "Categoría actualizada" };
 }
 

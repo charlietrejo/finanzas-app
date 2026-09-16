@@ -33,7 +33,11 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
   const router = useRouter();
   const [showTable, setShowTable] = useState(false);
 
-  const { cashFlow, categoryDistribution, netWorth } = data;
+  const { cashFlow, categoryDistribution, netWorth, monthlyInsights } = data;
+  const essentialPct =
+    monthlyInsights.totalExpenses > 0
+      ? Math.round((monthlyInsights.essentialExpenses / monthlyInsights.totalExpenses) * 100)
+      : 0;
 
   const categoryTotal = categoryDistribution.reduce((sum, s) => sum + s.amount, 0);
 
@@ -93,6 +97,25 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
         <Button variant="outline" onClick={() => window.print()}>
           <Printer size={16} /> Exportar PDF
         </Button>
+      </div>
+
+      {/* Secciones 3.6/3.8: dos cortes distintos de los gastos del mes en
+          curso — a propósito por separado, uno por necesidad (esencial vs
+          no) y otro por tamaño/frecuencia (gasto hormiga), aunque vienen de
+          los mismos datos. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card tone="mint">
+          <p className="text-sm font-medium text-slate">Gastos esenciales del mes</p>
+          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.essentialExpenses)}</p>
+          <p className="mt-1 text-xs text-slate">
+            {essentialPct}% de {formatMXN(monthlyInsights.totalExpenses)} gastados este mes
+          </p>
+        </Card>
+        <Card tone="apricot">
+          <p className="text-sm font-medium text-slate">Gasto hormiga</p>
+          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.antExpenseTotal)}</p>
+          <p className="mt-1 text-xs text-slate">Compras menores a $200 este mes, sin importar categoría</p>
+        </Card>
       </div>
 
       {showTable ? (

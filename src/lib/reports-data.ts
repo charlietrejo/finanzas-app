@@ -3,11 +3,14 @@ import type { Database } from "@/types/database";
 import { computeMonthlyCashFlow, type CashFlowPoint } from "@/lib/cash-flow";
 import { computeCategoryDistribution, type CategoryDistributionSlice } from "@/lib/category-distribution";
 import { computeNetWorthSeries, projectNetWorth, type NetWorthPoint } from "@/lib/net-worth";
+import { computeMonthlyInsights, type MonthlyInsights } from "@/lib/monthly-insights";
+import { getCurrentMonth, getMonthRange } from "@/lib/date-utils";
 
 export interface ReportsData {
   cashFlow: CashFlowPoint[];
   categoryDistribution: CategoryDistributionSlice[];
   netWorth: NetWorthPoint[];
+  monthlyInsights: MonthlyInsights;
 }
 
 /**
@@ -24,7 +27,7 @@ export async function getReportsData(
     await Promise.all([
       supabase.from("accounts").select("initial_balance, created_at"),
       supabase.from("debts").select("principal, created_at"),
-      supabase.from("categories").select("id, name"),
+      supabase.from("categories").select("id, name, is_essential"),
       supabase
         .from("transactions")
         .select(
@@ -62,5 +65,14 @@ export async function getReportsData(
   });
   const netWorth = projectNetWorth(netWorthHistory, transactions, 6);
 
-  return { cashFlow, categoryDistribution, netWorth };
+  // Secciones 3.6/3.8: "del mes" es el mes en curso, no el rango de
+  // tendencia (6/12/24) — reusa `transactions` (ya trae el historial
+  // completo) filtrando por el mes actual en vez de una query aparte.
+  const currentMonthRange = getMonthRange(getCurrentMonth());
+  const currentMonthTransactions = transactions.filter(
+    (t) => t.date >= currentMonthRange.start && t.date < currentMonthRange.end
+  );
+  const monthlyInsights = computeMonthlyInsights(currentMonthTransactions, categories ?? []);
+
+  return { cashFlow, categoryDistribution, netWorth, monthlyInsights };
 }
