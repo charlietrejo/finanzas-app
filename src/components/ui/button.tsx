@@ -13,11 +13,10 @@ const variantClasses: Record<ButtonVariant, string> = {
   outline:
     "bg-transparent text-slate border border-slate hover:bg-slate/5 disabled:opacity-50",
   ghost: "bg-transparent text-slate hover:bg-pebble/40 disabled:opacity-50",
-  // red-500 (bg-red-500) sobre texto blanco da 3.76:1, por debajo de AA
-  // (4.5:1) — red-600 da 4.83:1, red-700 6.47:1. Un solo par funciona en
-  // ambos modos (el rojo ya es lo bastante oscuro para leerse sobre fondo
-  // oscuro sin necesitar una variante dark: aparte).
-  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
+  // --color-danger (red-600) sobre texto blanco da 4.83:1, sobre AA — fijo
+  // en ambos modos, igual que bg-monday-violet, así que no necesita una
+  // variante dark: aparte (ver globals.css).
+  danger: "bg-danger text-white hover:bg-danger/90 disabled:bg-danger/50",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

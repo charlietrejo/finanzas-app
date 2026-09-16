@@ -154,9 +154,9 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                     className={
                       "text-lg font-light " +
                       (t.type === "expense"
-                        ? "text-red-600 dark:text-red-400"
+                        ? "text-danger-text"
                         : t.type === "income"
-                          ? "text-emerald-700 dark:text-emerald-400"
+                          ? "text-success-text"
                           : "text-ink")
                     }
                   >
@@ -193,7 +193,7 @@ function DeleteTransactionButton({ id }: { id: string }) {
         await deleteTransaction(id);
         setPending(false);
       }}
-      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-danger/10 hover:text-danger-text disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>
@@ -544,7 +544,7 @@ function TransactionForm({
           <Input id="note" name="note" defaultValue={transaction?.note ?? ""} maxLength={500} />
         </div>
 
-        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>

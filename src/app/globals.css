@@ -19,6 +19,15 @@
   --color-cloud: #f5f6f8;
   --color-snow: #ffffff;
 
+  /* Semantic (success/danger) — mismo patrón que monday-violet/violet-text:
+     --color-danger es fijo en ambos modos (fondo sólido de botón con texto
+     blanco encima, ya validado en ambos modos, ver button.tsx), mientras que
+     -success-text/-danger-text SÍ cambian de tono entre modos porque se usan
+     como TEXTO sobre --color-cloud/--color-snow, que sí cambian. */
+  --color-success-text: #047857;
+  --color-danger: #dc2626;
+  --color-danger-text: #dc2626;
+
   /* Pastels (surfaces only, never text/borders/buttons) */
   --color-mint: #bcfe90;
   --color-sky: #abf0ff;
@@ -69,6 +78,9 @@
     --color-cloud: #14151c;
     --color-snow: #1c1d27;
 
+    --color-success-text: #34d399;
+    --color-danger-text: #f87171;
+
     --color-mint: #24432a;
     --color-sky: #1b3a42;
     --color-apricot: #4a2a16;
@@ -91,6 +103,9 @@
   --color-slate: #a1a6bd;
   --color-cloud: #14151c;
   --color-snow: #1c1d27;
+
+  --color-success-text: #34d399;
+  --color-danger-text: #f87171;
 
   --color-mint: #24432a;
   --color-sky: #1b3a42;

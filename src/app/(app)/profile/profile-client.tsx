@@ -100,16 +100,17 @@ function ShortcutsSection() {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {SHORTCUTS.map(({ href, label, icon: Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          className="flex flex-col items-center gap-2 rounded-card bg-snow p-4 text-center shadow-[var(--shadow-card)] transition-[background-color,box-shadow] duration-200 hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
-        >
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-periwinkle text-violet-text">
-            <Icon size={20} />
-          </span>
-          <span className="text-xs font-medium text-ink">{label}</span>
-        </Link>
+        <Card key={href}>
+          <Link
+            href={href}
+            className="flex flex-col items-center gap-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+          >
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-periwinkle text-violet-text">
+              <Icon size={20} />
+            </span>
+            <span className="text-xs font-medium text-ink">{label}</span>
+          </Link>
+        </Card>
       ))}
     </div>
   );
@@ -171,7 +172,7 @@ function ProfileHeader({ email, fullName, avatarSvg }: { email: string; fullName
         )}
         <p className="truncate text-sm text-slate">{email}</p>
         {state?.error && (
-          <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="mt-1 text-sm text-danger-text">
             {state.error}
           </p>
         )}
@@ -250,7 +251,7 @@ function CategoriesSection({ categories: initialCategories }: { categories: Cate
                   <button
                     aria-label="Eliminar categoría"
                     onClick={() => handleDelete(c.id, c.name)}
-                    className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+                    className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-danger/10 hover:text-danger-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -316,7 +317,7 @@ function NewCategoryForm({
         </div>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-danger-text">
           {error}
         </p>
       )}
@@ -393,7 +394,7 @@ function EditCategoryRow({
         )}
       </form>
       {state?.error && (
-        <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="mt-1 text-sm text-danger-text">
           {state.error}
         </p>
       )}
@@ -463,12 +464,12 @@ function SecuritySection() {
           </div>
         </div>
         {state?.error && (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="text-sm text-danger-text">
             {state.error}
           </p>
         )}
         {state?.success && (
-          <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
+          <p role="status" className="text-sm text-success-text">
             {state.success}
           </p>
         )}

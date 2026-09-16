@@ -29,7 +29,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full">
         {pending ? "Entrando..." : "Entrar"}

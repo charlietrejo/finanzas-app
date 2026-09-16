@@ -196,7 +196,7 @@ export default async function DashboardPage() {
                     {formatDate(t.date)} · {t.account?.name ?? t.debt?.name ?? "—"}
                   </p>
                 </div>
-                <p className={`shrink-0 font-medium ${t.type === "income" ? "text-emerald-700 dark:text-emerald-400" : "text-ink"}`}>
+                <p className={`shrink-0 font-medium ${t.type === "income" ? "text-success-text" : "text-ink"}`}>
                   {t.type === "income" ? "+" : "-"}
                   {formatMXN(t.amount)}
                 </p>

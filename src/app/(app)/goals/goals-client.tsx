@@ -144,7 +144,7 @@ function DeleteGoalButton({ id, name }: { id: string; name: string }) {
         await deleteGoal(id);
         setPending(false);
       }}
-      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-danger/10 hover:text-danger-text disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
     >
       <Trash2 size={16} />
     </button>
@@ -195,7 +195,7 @@ function CreateGoalForm({ accounts, onDone }: { accounts: Account[]; onDone: () 
           </div>
         )}
 
-        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -262,7 +262,7 @@ function EditGoalForm({ goal, accounts, onDone }: { goal: Goal; accounts: Accoun
           </div>
         )}
 
-        {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+        {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={pending}>
@@ -318,7 +318,7 @@ function ContributeForm({ goal, accounts, onDone }: { goal: Goal; accounts: Acco
         </div>
       </div>
 
-      {state?.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{state.error}</p>}
+      {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending || accounts.length === 0}>
