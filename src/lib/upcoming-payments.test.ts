@@ -69,6 +69,64 @@ describe("getUpcomingPayments — tarjetas de crédito (payment_due_day)", () =>
   });
 });
 
+describe("getUpcomingPayments — sección 3.4.1: fecha de corte de tarjeta como evento independiente", () => {
+  it("agrega un evento aparte para cutoff_day, sin monto, distinto del de payment_due_day", () => {
+    const result = getUpcomingPayments(
+      {
+        debts: [
+          {
+            id: "a1",
+            name: "HSBC VIVA",
+            type: "credit_card",
+            due_day: null,
+            payment_due_day: 5,
+            cutoff_day: 2,
+            minimum_payment: 800,
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z"),
+      7
+    );
+    expect(result).toEqual([
+      { key: "debt:a1:cutoff", source: "credit_account_cutoff", name: "HSBC VIVA · Fecha de corte", amount: null, dueDate: "2026-03-02", daysUntil: 1 },
+      { key: "debt:a1", source: "credit_account", name: "HSBC VIVA", amount: 800, dueDate: "2026-03-05", daysUntil: 4 },
+    ]);
+  });
+
+  it("sin cutoff_day no agrega el evento de corte", () => {
+    const result = getUpcomingPayments(
+      {
+        debts: [
+          { id: "a1", name: "HSBC VIVA", type: "credit_card", due_day: null, payment_due_day: 5, cutoff_day: null, minimum_payment: 800 },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z"),
+      7
+    );
+    expect(result.map((r) => r.source)).toEqual(["credit_account"]);
+  });
+});
+
+describe("getUpcomingPayments — ventana default (sección 3.4.1)", () => {
+  it("por default es de 5 días, no 7: algo a 6 días queda fuera sin ventana explícita", () => {
+    const result = getUpcomingPayments(
+      { debts: [{ id: "d1", name: "A 6 días", type: "loan", due_day: 7, payment_due_day: null }] },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("ese mismo caso sí entra si se pide explícitamente una ventana de 6 días", () => {
+    const result = getUpcomingPayments(
+      { debts: [{ id: "d1", name: "A 6 días", type: "loan", due_day: 7, payment_due_day: null }] },
+      new Date("2026-03-01T00:00:00Z"),
+      6
+    );
+    expect(result).toHaveLength(1);
+  });
+});
+
 describe("getUpcomingPayments — transacciones recurrentes", () => {
   it("avanza una frecuencia personalizada (cada N días) varias veces si el ancla quedó muy atrás", () => {
     const result = getUpcomingPayments(

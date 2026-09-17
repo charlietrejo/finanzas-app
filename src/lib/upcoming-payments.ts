@@ -1,7 +1,7 @@
 import { advanceRecurringDate } from "@/lib/recurring";
 import type { RecurringFrequency } from "@/types/database";
 
-export type UpcomingPaymentSource = "debt" | "credit_account" | "recurring_transaction";
+export type UpcomingPaymentSource = "debt" | "credit_account" | "credit_account_cutoff" | "recurring_transaction";
 
 export interface UpcomingPayment {
   key: string;
@@ -86,6 +86,7 @@ interface DebtLike {
   type: string;
   due_day: number | null;
   payment_due_day: number | null;
+  cutoff_day?: number | null;
   minimum_payment?: number;
 }
 
@@ -101,9 +102,10 @@ interface RecurringTransactionLike {
 
 /**
  * Zona de alertas de próximos pagos del Dashboard (sección 3.4.1): unifica
- * dos fuentes de vencimientos — deudas (préstamos/personales por `due_day`,
- * tarjetas por `payment_due_day`, ambas viven en `debts`) y transacciones
- * recurrentes — en una sola lista ordenada por cercanía.
+ * tres fuentes de vencimientos — deudas/préstamos personales por `due_day`,
+ * tarjetas de crédito (por `payment_due_day` Y, como evento independiente,
+ * su `cutoff_day`) y transacciones recurrentes — en una sola lista ordenada
+ * por cercanía.
  */
 export function getUpcomingPayments(
   input: {
@@ -111,24 +113,42 @@ export function getUpcomingPayments(
     recurringTransactions?: RecurringTransactionLike[];
   },
   today: Date = new Date(),
-  withinDays: number = 7
+  withinDays: number = 5
 ): UpcomingPayment[] {
   const { debts = [], recurringTransactions = [] } = input;
   const upcoming: UpcomingPayment[] = [];
 
   for (const debt of debts) {
-    const dueDay = debt.due_day ?? debt.payment_due_day;
-    if (!dueDay) continue;
-    upcoming.push(
-      toUpcoming(
-        `debt:${debt.id}`,
-        debt.type === "credit_card" ? "credit_account" : "debt",
-        debt.name,
-        debt.minimum_payment ?? null,
-        nextMonthlyDueDate(dueDay, today),
-        today
-      )
-    );
+    if (debt.type === "credit_card") {
+      if (debt.payment_due_day) {
+        upcoming.push(
+          toUpcoming(
+            `debt:${debt.id}`,
+            "credit_account",
+            debt.name,
+            debt.minimum_payment ?? null,
+            nextMonthlyDueDate(debt.payment_due_day, today),
+            today
+          )
+        );
+      }
+      if (debt.cutoff_day) {
+        upcoming.push(
+          toUpcoming(
+            `debt:${debt.id}:cutoff`,
+            "credit_account_cutoff",
+            `${debt.name} · Fecha de corte`,
+            null,
+            nextMonthlyDueDate(debt.cutoff_day, today),
+            today
+          )
+        );
+      }
+    } else if (debt.due_day) {
+      upcoming.push(
+        toUpcoming(`debt:${debt.id}`, "debt", debt.name, debt.minimum_payment ?? null, nextMonthlyDueDate(debt.due_day, today), today)
+      );
+    }
   }
 
   for (const tx of recurringTransactions) {

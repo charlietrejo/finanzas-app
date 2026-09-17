@@ -29,7 +29,7 @@ interface LoanAlertRow {
   current_balance: number;
 }
 
-const DAYS_WINDOW = 7;
+const DAYS_WINDOW = 5;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -174,67 +174,6 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-ink">Últimos movimientos</h2>
-          <Link href="/transactions" className="text-sm font-medium text-violet-text">
-            Ver todos
-          </Link>
-        </div>
-
-        {recentTransactionList.length === 0 ? (
-          <Card>
-            <p className="text-sm text-slate">Aún no tienes movimientos registrados.</p>
-          </Card>
-        ) : (
-          <Card className="flex flex-col gap-3">
-            {recentTransactionList.map((t) => (
-              <div key={t.id} className="flex items-center justify-between gap-3 text-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-ink">{t.category?.name ?? "Sin categoría"}</p>
-                  <p className="truncate text-xs text-slate">
-                    {formatDate(t.date)} · {t.account?.name ?? t.debt?.name ?? "—"}
-                  </p>
-                </div>
-                <p className={`shrink-0 font-medium ${t.type === "income" ? "text-success-text" : "text-ink"}`}>
-                  {t.type === "income" ? "+" : "-"}
-                  {formatMXN(t.amount)}
-                </p>
-              </div>
-            ))}
-          </Card>
-        )}
-      </div>
-
-      {loanAlerts.length > 0 && (
-        <Card tone="lavender" className="border-l-4 border-monday-violet">
-          <div className="mb-2 flex items-center gap-2">
-            <HandCoins size={18} className="text-monday-violet" />
-            <p className="text-lg font-medium text-ink">Préstamos por cobrar</p>
-          </div>
-          <ul className="flex flex-col gap-2">
-            {loanAlerts.map((l) => (
-              <li key={l.id} className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-ink">{l.borrower_name}</p>
-                  <p className="text-sm text-slate">{formatMXN(l.current_balance)} pendientes</p>
-                </div>
-                {l.daysUntil === null ? (
-                  <Badge tone="info">Sin fecha</Badge>
-                ) : (
-                  <Badge tone={l.daysUntil <= 2 ? "danger" : "warning"}>
-                    {l.daysUntil <= 0 ? "Vence hoy" : l.daysUntil === 1 ? "Vence mañana" : `Vence en ${l.daysUntil} días`}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-          <Link href="/loans" className="mt-3 inline-block text-sm font-medium text-violet-text">
-            Ver préstamos
-          </Link>
-        </Card>
-      )}
-
       {upcomingPayments.length > 0 && (
         <Card tone="apricot">
           <div className="mb-2 flex items-center gap-2">
@@ -287,6 +226,67 @@ export default async function DashboardPage() {
               </Card>
             ))}
           </div>
+        )}
+      </div>
+
+      {loanAlerts.length > 0 && (
+        <Card tone="lavender" className="border-l-4 border-monday-violet">
+          <div className="mb-2 flex items-center gap-2">
+            <HandCoins size={18} className="text-monday-violet" />
+            <p className="text-lg font-medium text-ink">Préstamos por cobrar</p>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {loanAlerts.map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-ink">{l.borrower_name}</p>
+                  <p className="text-sm text-slate">{formatMXN(l.current_balance)} pendientes</p>
+                </div>
+                {l.daysUntil === null ? (
+                  <Badge tone="info">Sin fecha</Badge>
+                ) : (
+                  <Badge tone={l.daysUntil <= 2 ? "danger" : "warning"}>
+                    {l.daysUntil <= 0 ? "Vence hoy" : l.daysUntil === 1 ? "Vence mañana" : `Vence en ${l.daysUntil} días`}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Link href="/loans" className="mt-3 inline-block text-sm font-medium text-violet-text">
+            Ver préstamos
+          </Link>
+        </Card>
+      )}
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-ink">Últimos movimientos</h2>
+          <Link href="/transactions" className="text-sm font-medium text-violet-text">
+            Ver todos
+          </Link>
+        </div>
+
+        {recentTransactionList.length === 0 ? (
+          <Card>
+            <p className="text-sm text-slate">Aún no tienes movimientos registrados.</p>
+          </Card>
+        ) : (
+          <Card className="flex flex-col gap-3">
+            {recentTransactionList.map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-ink">{t.category?.name ?? "Sin categoría"}</p>
+                  <p className="truncate text-xs text-slate">
+                    {formatDate(t.date)} · {t.account?.name ?? t.debt?.name ?? "—"}
+                  </p>
+                </div>
+                <p className={`shrink-0 font-medium ${t.type === "income" ? "text-success-text" : "text-ink"}`}>
+                  {t.type === "income" ? "+" : "-"}
+                  {formatMXN(t.amount)}
+                </p>
+              </div>
+            ))}
+          </Card>
         )}
       </div>
     </div>
