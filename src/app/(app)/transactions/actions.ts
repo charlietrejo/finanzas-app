@@ -144,6 +144,38 @@ export async function deleteTransaction(id: string) {
 }
 
 /**
+ * Sección 3.4.1 del doc ("Eliminar una recurrencia"): detiene SOLO las
+ * futuras repeticiones de una plantilla (is_recurring=true) — a propósito
+ * NO usa delete_transaction/reverse_transaction_effect: la plantilla ya
+ * tuvo un efecto de saldo real desde que se creó (su propio date/amount es
+ * la primera ocurrencia), y revertirlo aquí borraría dinero que de verdad
+ * se movió. Solo se limpian los campos de recurrencia — la fila se queda
+ * como un movimiento normal ya ocurrido; las ocurrencias ya generadas
+ * (filas independientes, is_recurring=false, sin FK hacia la plantilla) no
+ * se tocan en absoluto.
+ */
+export async function stopRecurringTemplate(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("transactions")
+    .update({
+      is_recurring: false,
+      recurring_frequency: null,
+      recurring_interval_days: null,
+      recurring_end_date: null,
+      recurring_is_automatic: true,
+      next_occurrence_date: null,
+    })
+    .eq("id", id);
+  if (error) {
+    return { error: error.message };
+  }
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  return null;
+}
+
+/**
  * Sección 3.4.2 del doc: cuando la categoría elegida en el formulario de
  * movimientos es "Préstamo", el submit pasa por aquí en vez de
  * createTransaction — crea el gasto normal Y el registro en loans_given de

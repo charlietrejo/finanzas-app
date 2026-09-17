@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Repeat } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Repeat, Ban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   createCategory,
   createLoanGiven,
   confirmRecurringOccurrence,
+  stopRecurringTemplate,
   type ActionState,
 } from "./actions";
 import type { Account, Category, Debt, Merchant, RecurringFrequency, TransactionType } from "@/types/database";
@@ -142,10 +143,13 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={TYPE_BADGE_TONE[t.type]}>{TYPE_LABELS[t.type]}</Badge>
+                    {/* Sección 3.4.1 del doc ("Eliminar una recurrencia"): toda
+                        plantilla (is_recurring=true) debe mostrarse marcada
+                        como tal en la lista. */}
                     {t.is_recurring && (
-                      <span className="text-slate" title="Recurrente">
-                        <Repeat size={14} />
-                      </span>
+                      <Badge tone="info" className="gap-1">
+                        <Repeat size={12} /> Recurrente
+                      </Badge>
                     )}
                     <span className="text-xs text-slate">{formatDate(t.date)}</span>
                   </div>
@@ -181,6 +185,7 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                   >
                     <Pencil size={16} />
                   </button>
+                  {t.is_recurring && <StopRecurringButton id={t.id} name={t.note || t.category?.name || "esta plantilla"} />}
                   <DeleteTransactionButton id={t.id} />
                 </div>
               </Card>
@@ -189,6 +194,42 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Sección 3.4.1 del doc ("Eliminar una recurrencia"): distinta del trash de
+ * abajo (DeleteTransactionButton) — esa borra la FILA (y revierte su efecto
+ * de saldo, correcto para un movimiento normal). Una plantilla recurrente ya
+ * tuvo un efecto de saldo real desde que se creó (su propio `date`/`amount`
+ * es la primera ocurrencia); "eliminar la recurrencia" debe detener SOLO las
+ * futuras repeticiones, sin revertir eso ni tocar las ocurrencias ya
+ * generadas (filas independientes, is_recurring=false, sin relación por FK
+ * con la plantilla) — por eso usa stopRecurringTemplate (solo limpia los
+ * campos de recurrencia) en vez de deleteTransaction.
+ */
+function StopRecurringButton({ id, name }: { id: string; name: string }) {
+  const [pending, setPending] = useState(false);
+  return (
+    <button
+      aria-label="Eliminar recurrencia"
+      title="Eliminar recurrencia"
+      disabled={pending}
+      onClick={async () => {
+        if (
+          !confirm(
+            `¿Eliminar la recurrencia de "${name}"? Deja de repetirse hacia adelante; los movimientos ya generados en el pasado no se ven afectados.`
+          )
+        )
+          return;
+        setPending(true);
+        await stopRecurringTemplate(id);
+        setPending(false);
+      }}
+      className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet"
+    >
+      <Ban size={16} />
+    </button>
   );
 }
 
