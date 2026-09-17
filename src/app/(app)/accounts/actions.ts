@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { adjustAccountBalanceSchema, createAccountSchema, updateAccountSchema } from "@/lib/validations/account";
 
-export type ActionState = { error?: string } | null;
+export type ActionState = { error?: string; info?: string } | null;
 
 export async function createAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = createAccountSchema.safeParse({
@@ -97,6 +97,13 @@ export async function adjustAccountBalance(
   });
 
   if (error) {
+    // adjust_account_balance (023_account_balance_adjustment.sql) rechaza con
+    // este mensaje cuando la diferencia es 0 — no es una falla, es "no había
+    // nada que reconciliar", así que se distingue de un error real para que
+    // la UI lo muestre en tono informativo, no de alerta.
+    if (error.message.includes("no hay nada que ajustar")) {
+      return { info: error.message };
+    }
     return { error: error.message };
   }
 

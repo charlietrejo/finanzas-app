@@ -6,7 +6,11 @@ import type { Category } from "@/types/database";
 import packageJson from "../../../../package.json";
 
 // Fila para exportar CSV/JSON: unbounded (sin .limit) a propósito — es un
-// backup manual, no la lista paginada de Movimientos.
+// backup manual, no la lista paginada de Movimientos. Pero el query que la
+// llena (con sus 5 joins) solo se dispara al hacer clic en exportar
+// (exportTransactions en actions.ts), no en cada visita a esta pantalla —
+// aquí solo se pide el conteo, mucho más liviano, para el texto "Respaldo
+// manual de tus N movimientos".
 export interface ExportTransactionRow {
   id: string;
   type: "income" | "expense" | "transfer";
@@ -35,15 +39,9 @@ export default async function ProfilePage() {
   const themeCookie = cookieStore.get("theme")?.value;
   const initialTheme = themeCookie === "dark" ? "dark" : "light";
 
-  const [{ data: categories }, { data: transactions }] = await Promise.all([
+  const [{ data: categories }, { count: transactionCount }] = await Promise.all([
     supabase.from("categories").select("*").order("type", { ascending: true }).order("name", { ascending: true }),
-    supabase
-      .from("transactions")
-      .select(
-        "id, type, amount, date, note, tags, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
-      )
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false }),
+    supabase.from("transactions").select("id", { count: "exact", head: true }),
   ]);
 
   return (
@@ -53,7 +51,7 @@ export default async function ProfilePage() {
       fullName={(user.user_metadata?.full_name as string | undefined) ?? ""}
       initialTheme={initialTheme}
       categories={(categories ?? []) as Category[]}
-      transactions={(transactions ?? []) as unknown as ExportTransactionRow[]}
+      transactionCount={transactionCount ?? 0}
       appVersion={packageJson.version}
     />
   );

@@ -5,6 +5,13 @@
  * la nueva migración 013_rls_ownership_hardening.sql efectivamente rechaza
  * inserts que referencian IDs ajenos (account_id/category_id/debt_id/goal_id).
  *
+ * Extendido (post-review de la sección 3.4.2/3.1) para cubrir las tablas y
+ * RPC agregadas en 021_loans_given.sql y 023_account_balance_adjustment.sql:
+ * loans_given, loan_repayments, create_loan_repayment y adjust_account_balance.
+ * Antes de esta extensión, verify-loans-given.mjs / verify-account-balance-
+ * adjustment.mjs solo probaban "funciona con tus propios datos", no "rechaza
+ * los datos de otro usuario" — este script es el único con ese propósito.
+ *
  * Uso:
  *   NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
  *   USER_A_EMAIL=... USER_A_PASSWORD=... \
@@ -110,6 +117,31 @@ async function main() {
     .select()
     .single();
 
+  // Préstamo otorgado por A (sección 3.4.2) y un cobro parcial, para probar
+  // que B no puede leer/tocar loans_given ni loan_repayments de A. Una
+  // transacción propia de B para probar las referencias cruzadas de
+  // loan_repayments_insert_own sin depender también de su check de transacción.
+  const loanA = await clientA.rpc("create_loan_given", {
+    p_account_id: accA.id,
+    p_debt_id: null,
+    p_amount: 200,
+    p_date: new Date().toISOString().slice(0, 10),
+    p_category_id: catA.id,
+    p_borrower_name: "Deudor de A",
+  });
+  const repaymentA = await clientA.rpc("create_loan_repayment", {
+    p_loan_given_id: loanA.data.id,
+    p_account_id: accA.id,
+    p_amount: 50,
+    p_date: new Date().toISOString().slice(0, 10),
+  });
+  const { data: txB } = await clientB.rpc("create_transaction", {
+    p_account_id: accB.id,
+    p_type: "expense",
+    p_amount: 5,
+    p_date: new Date().toISOString().slice(0, 10),
+  });
+
   console.log("\n1) B no puede LEER datos de A");
   const readTests = [
     ["accounts", accA.id],
@@ -118,6 +150,8 @@ async function main() {
     ["budgets", budgetA.id],
     ["debts", debtA.id],
     ["goals", goalA.id],
+    ["loans_given", loanA.data.id],
+    ["loan_repayments", repaymentA.data.id],
   ];
   for (const [table, id] of readTests) {
     const { data } = await clientB.from(table).select("*").eq("id", id);
@@ -171,6 +205,24 @@ async function main() {
   });
   check("rechaza goal_contribution con goal_id ajeno", !!goalContribCross);
 
+  const { error: loanGivenCross } = await clientB.from("loans_given").insert({
+    user_id: userIdB,
+    transaction_id: txA.id, // ajeno
+    borrower_name: "x",
+    current_balance: 10,
+    status: "active",
+  });
+  check("rechaza loans_given con transaction_id ajeno", !!loanGivenCross);
+
+  const { error: loanRepaymentCrossLoan } = await clientB.from("loan_repayments").insert({
+    user_id: userIdB,
+    loan_given_id: loanA.data.id, // ajeno
+    transaction_id: txB.id, // propio
+    amount: 5,
+    date: new Date().toISOString().slice(0, 10),
+  });
+  check("rechaza loan_repayment con loan_given_id ajeno", !!loanRepaymentCrossLoan);
+
   console.log("\n3) B no puede ACTUALIZAR ni BORRAR filas de A por id directo");
 
   const { data: updateResult } = await clientB.from("accounts").update({ name: "hackeado" }).eq("id", accA.id).select();
@@ -178,6 +230,20 @@ async function main() {
 
   const { data: deleteResult } = await clientB.from("categories").delete().eq("id", catA.id).select();
   check("delete de B sobre categoría de A afecta 0 filas", (deleteResult ?? []).length === 0);
+
+  const { data: loanUpdateResult } = await clientB
+    .from("loans_given")
+    .update({ borrower_name: "hackeado" })
+    .eq("id", loanA.data.id)
+    .select();
+  check("update de B sobre préstamo de A afecta 0 filas", (loanUpdateResult ?? []).length === 0);
+
+  const { data: loanDeleteResult } = await clientB
+    .from("loan_repayments")
+    .delete()
+    .eq("id", repaymentA.data.id)
+    .select();
+  check("delete de B sobre cobro de préstamo de A afecta 0 filas", (loanDeleteResult ?? []).length === 0);
 
   console.log("\n4) Las RPC siguen rechazando IDs ajenos (regresión, ya funcionaba antes del fix)");
 
@@ -204,6 +270,20 @@ async function main() {
     p_date: new Date().toISOString().slice(0, 10),
   });
   check("create_goal_contribution rechaza goal_id ajeno", !!rpcGoalCross);
+
+  const { error: rpcLoanRepaymentCross } = await clientB.rpc("create_loan_repayment", {
+    p_loan_given_id: loanA.data.id,
+    p_account_id: accB.id,
+    p_amount: 10,
+    p_date: new Date().toISOString().slice(0, 10),
+  });
+  check("create_loan_repayment rechaza loan_given_id ajeno", !!rpcLoanRepaymentCross);
+
+  const { error: rpcAdjustBalanceCross } = await clientB.rpc("adjust_account_balance", {
+    p_account_id: accA.id,
+    p_real_balance: 999,
+  });
+  check("adjust_account_balance rechaza account_id ajeno", !!rpcAdjustBalanceCross);
 
   console.log("\nLimpiando datos de prueba...");
   await clientA.from("goals").delete().eq("id", goalA.id);

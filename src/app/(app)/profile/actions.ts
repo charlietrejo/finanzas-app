@@ -4,8 +4,30 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { resetPasswordSchema } from "@/lib/validations/auth";
 import { createCategory as createCategoryShared } from "@/app/(app)/transactions/actions";
+import type { ExportTransactionRow } from "./page";
 
 export type ActionState = { error?: string; success?: string } | null;
+
+/**
+ * Sección 3.7 del doc ("Datos: exportar CSV/JSON"): el historial completo de
+ * movimientos solo se consulta al hacer clic en un botón de exportar, no en
+ * cada visita a Cuenta (page.tsx solo pide el conteo) — evita traer todo el
+ * historial con sus joins en cada carga de una pantalla de alto tráfico
+ * (accesible desde el avatar en cualquier página).
+ */
+export async function exportTransactions(): Promise<ExportTransactionRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(
+      "id, type, amount, date, note, tags, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
+    )
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as ExportTransactionRow[];
+}
 
 /** Sección 3.7 del doc: nombre para mostrar, guardado en user_metadata (sin tabla nueva). */
 export async function updateDisplayName(_prev: ActionState, formData: FormData): Promise<ActionState> {

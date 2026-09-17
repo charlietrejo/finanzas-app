@@ -11,7 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { signOut } from "@/app/(auth)/actions";
 import { buildCsv, downloadCsv } from "@/lib/csv-export";
-import { updateDisplayName, changePassword, createCategory, updateCategory, deleteCategory } from "./actions";
+import {
+  updateDisplayName,
+  changePassword,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  exportTransactions,
+} from "./actions";
 import type { ActionState } from "./actions";
 import type { Category } from "@/types/database";
 import type { ExportTransactionRow } from "./page";
@@ -34,7 +41,7 @@ export function ProfileClient({
   fullName,
   initialTheme,
   categories,
-  transactions,
+  transactionCount,
   appVersion,
 }: {
   userId: string;
@@ -42,7 +49,7 @@ export function ProfileClient({
   fullName: string;
   initialTheme: "light" | "dark";
   categories: Category[];
-  transactions: ExportTransactionRow[];
+  transactionCount: number;
   appVersion: string;
 }) {
   // user.id (no email): estable aunque el usuario cambie su correo desde
@@ -67,7 +74,7 @@ export function ProfileClient({
 
       <CategoriesSection categories={categories} />
 
-      <DataSection transactions={transactions} />
+      <DataSection transactionCount={transactionCount} />
 
       <SecuritySection />
 
@@ -406,9 +413,15 @@ function EditCategoryRow({
   );
 }
 
-function DataSection({ transactions }: { transactions: ExportTransactionRow[] }) {
-  function handleExportCsv() {
-    const rows = transactions.map((t) => [
+// Sección 3.7 del doc: el historial completo (con sus 5 joins) solo se trae
+// al hacer clic en un botón de exportar (exportTransactions, actions.ts),
+// no en cada visita a Cuenta — page.tsx solo pasa el conteo para el texto.
+function DataSection({ transactionCount }: { transactionCount: number }) {
+  const [pending, setPending] = useState<"csv" | "json" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function buildRows(transactions: ExportTransactionRow[]) {
+    return transactions.map((t) => [
       t.date,
       t.type,
       t.amount,
@@ -419,15 +432,28 @@ function DataSection({ transactions }: { transactions: ExportTransactionRow[] })
       t.tags.join(" "),
       t.note ?? "",
     ]);
-    const csv = buildCsv(
-      ["Fecha", "Tipo", "Monto", "Cuenta/Tarjeta", "Cuenta destino", "Categoría", "Comercio", "Etiquetas", "Nota"],
-      rows
-    );
-    downloadCsv(`movimientos-northstar-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   }
 
-  function handleExportJson() {
-    downloadJson(`movimientos-northstar-${new Date().toISOString().slice(0, 10)}.json`, transactions);
+  async function handleExport(format: "csv" | "json") {
+    setPending(format);
+    setError(null);
+    try {
+      const transactions = await exportTransactions();
+      const stamp = new Date().toISOString().slice(0, 10);
+      if (format === "csv") {
+        const csv = buildCsv(
+          ["Fecha", "Tipo", "Monto", "Cuenta/Tarjeta", "Cuenta destino", "Categoría", "Comercio", "Etiquetas", "Nota"],
+          buildRows(transactions)
+        );
+        downloadCsv(`movimientos-northstar-${stamp}.csv`, csv);
+      } else {
+        downloadJson(`movimientos-northstar-${stamp}.json`, transactions);
+      }
+    } catch {
+      setError("No se pudo exportar. Intenta de nuevo.");
+    } finally {
+      setPending(null);
+    }
   }
 
   return (
@@ -435,17 +461,22 @@ function DataSection({ transactions }: { transactions: ExportTransactionRow[] })
       <div>
         <h2 className="font-medium text-ink">Datos</h2>
         <p className="text-sm text-slate">
-          Respaldo manual de tus {transactions.length} movimiento{transactions.length === 1 ? "" : "s"}.
+          Respaldo manual de tus {transactionCount} movimiento{transactionCount === 1 ? "" : "s"}.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={handleExportCsv} disabled={transactions.length === 0}>
-          <Download size={16} /> Exportar CSV
+        <Button variant="outline" onClick={() => handleExport("csv")} disabled={transactionCount === 0 || pending !== null}>
+          <Download size={16} /> {pending === "csv" ? "Exportando..." : "Exportar CSV"}
         </Button>
-        <Button variant="outline" onClick={handleExportJson} disabled={transactions.length === 0}>
-          <Download size={16} /> Exportar JSON
+        <Button variant="outline" onClick={() => handleExport("json")} disabled={transactionCount === 0 || pending !== null}>
+          <Download size={16} /> {pending === "json" ? "Exportando..." : "Exportar JSON"}
         </Button>
       </div>
+      {error && (
+        <p role="alert" className="text-sm text-danger-text">
+          {error}
+        </p>
+      )}
     </Card>
   );
 }
