@@ -99,25 +99,6 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
         </Button>
       </div>
 
-      {/* Secciones 3.6/3.8: dos cortes distintos de los gastos del mes en
-          curso — a propósito por separado, uno por necesidad (esencial vs
-          no) y otro por tamaño/frecuencia (gasto hormiga), aunque vienen de
-          los mismos datos. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card tone="mint">
-          <p className="text-sm font-medium text-slate">Gastos esenciales del mes</p>
-          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.essentialExpenses)}</p>
-          <p className="mt-1 text-xs text-slate">
-            {essentialPct}% de {formatMXN(monthlyInsights.totalExpenses)} gastados este mes
-          </p>
-        </Card>
-        <Card tone="apricot">
-          <p className="text-sm font-medium text-slate">Gasto hormiga</p>
-          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.antExpenseTotal)}</p>
-          <p className="mt-1 text-xs text-slate">Compras menores a $200 este mes, sin importar categoría</p>
-        </Card>
-      </div>
-
       {showTable ? (
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[500px] text-left text-sm">
@@ -144,49 +125,73 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
           </table>
         </Card>
       ) : (
-        <>
-          <section>
-            <h2 className="mb-3 text-lg font-medium text-ink">Flujo de efectivo</h2>
-            <Card>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={cashFlow}>
-                  <CartesianGrid vertical={false} stroke="var(--color-mist)" />
-                  <XAxis
-                    dataKey="month"
-                    tickFormatter={formatMonthShort}
-                    tick={{ fill: "var(--color-slate)", fontSize: 12 }}
-                    axisLine={{ stroke: "var(--color-mist)" }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: "var(--color-slate)", fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={70}
-                    tickFormatter={(v) => formatMXN(v)}
-                  />
-                  <Tooltip
-                    content={(props) => (
-                      <ChartTooltip
-                        active={props.active}
-                        label={props.label ? formatMonthShort(String(props.label)) : undefined}
-                        formatter={formatMXN}
-                        payload={props.payload?.map((p) => ({
-                          name: String(p.name),
-                          value: Number(p.value),
-                          color: String(p.color),
-                        }))}
-                      />
-                    )}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 13, color: "var(--color-slate)" }} />
-                  <Bar dataKey="income" name="Ingresos" fill={CASH_FLOW_COLORS.income} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                  <Bar dataKey="expense" name="Gastos" fill={CASH_FLOW_COLORS.expense} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-          </section>
+        <section>
+          <h2 className="mb-3 text-lg font-medium text-ink">Flujo de efectivo</h2>
+          <Card>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={cashFlow}>
+                <CartesianGrid vertical={false} stroke="var(--color-mist)" />
+                <XAxis
+                  dataKey="month"
+                  tickFormatter={formatMonthShort}
+                  tick={{ fill: "var(--color-slate)", fontSize: 12 }}
+                  axisLine={{ stroke: "var(--color-mist)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "var(--color-slate)", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={70}
+                  tickFormatter={(v) => formatMXN(v)}
+                />
+                <Tooltip
+                  content={(props) => (
+                    <ChartTooltip
+                      active={props.active}
+                      label={props.label ? formatMonthShort(String(props.label)) : undefined}
+                      formatter={formatMXN}
+                      payload={props.payload?.map((p) => ({
+                        name: String(p.name),
+                        value: Number(p.value),
+                        color: String(p.color),
+                      }))}
+                    />
+                  )}
+                />
+                <Legend wrapperStyle={{ fontSize: 13, color: "var(--color-slate)" }} />
+                <Bar dataKey="income" name="Ingresos" fill={CASH_FLOW_COLORS.income} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="expense" name="Gastos" fill={CASH_FLOW_COLORS.expense} radius={[4, 4, 0, 0]} maxBarSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </section>
+      )}
 
+      {/* Secciones 3.6/3.8: dos cortes distintos de los gastos del mes en
+          curso — a propósito por separado, uno por necesidad (esencial vs
+          no) y otro por tamaño/frecuencia (gasto hormiga), aunque vienen de
+          los mismos datos. Van después de Flujo de efectivo (y su
+          tabla/gráfica): los botones de arriba (Ver como tabla/Exportar)
+          actúan específicamente sobre esa sección, así que no puede haber
+          ninguna card entre ellos. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card tone="mint">
+          <p className="text-sm font-medium text-slate">Gastos esenciales del mes</p>
+          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.essentialExpenses)}</p>
+          <p className="mt-1 text-xs text-slate">
+            {essentialPct}% de {formatMXN(monthlyInsights.totalExpenses)} gastados este mes
+          </p>
+        </Card>
+        <Card tone="apricot">
+          <p className="text-sm font-medium text-slate">Gasto hormiga</p>
+          <p className="mt-2 text-3xl font-light text-ink">{formatMXN(monthlyInsights.antExpenseTotal)}</p>
+          <p className="mt-1 text-xs text-slate">Compras menores a $200 este mes, sin importar categoría</p>
+        </Card>
+      </div>
+
+      {!showTable && (
+        <>
           <section>
             <h2 className="mb-3 text-lg font-medium text-ink">Distribución de gastos por categoría</h2>
             <Card>
