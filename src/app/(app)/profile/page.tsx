@@ -48,6 +48,7 @@ export default async function ProfilePage() {
 
   return (
     <ProfileClient
+      userId={user.id}
       email={user.email ?? ""}
       fullName={(user.user_metadata?.full_name as string | undefined) ?? ""}
       initialTheme={initialTheme}

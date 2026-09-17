@@ -29,6 +29,7 @@ function downloadJson(filename: string, data: unknown) {
 }
 
 export function ProfileClient({
+  userId,
   email,
   fullName,
   initialTheme,
@@ -36,6 +37,7 @@ export function ProfileClient({
   transactions,
   appVersion,
 }: {
+  userId: string;
   email: string;
   fullName: string;
   initialTheme: "light" | "dark";
@@ -43,7 +45,9 @@ export function ProfileClient({
   transactions: ExportTransactionRow[];
   appVersion: string;
 }) {
-  const avatarSvg = blobatar(email || fullName || "usuario", { size: 72, background: "circle" });
+  // user.id (no email): estable aunque el usuario cambie su correo desde
+  // Seguridad (sección 3.7) — mismo criterio que el avatar del sidebar (layout.tsx).
+  const avatarSvg = blobatar(userId, { size: 72, background: "circle" });
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in">

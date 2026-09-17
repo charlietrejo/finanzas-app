@@ -23,6 +23,7 @@ interface TransactionLike {
 
 interface CategoryLike {
   id: string;
+  name: string;
   is_essential: boolean;
 }
 
@@ -31,9 +32,14 @@ export function computeMonthlyInsights(
   categories: CategoryLike[]
 ): MonthlyInsights {
   const essentialCategoryIds = new Set(categories.filter((c) => c.is_essential).map((c) => c.id));
-  // Sección 3.1 del doc: un ajuste de saldo no es una compra/ingreso real —
-  // se excluye de los 3 cortes de este módulo (total, esenciales, hormiga).
-  const expenses = transactions.filter((t) => t.type === "expense" && !t.is_adjustment);
+  // Sección 3.4.2 del doc: un préstamo otorgado es un gasto normal por
+  // mecánica de saldo, pero es una transferencia de activo (se espera de
+  // vuelta, ver loans_given) — no una pérdida real. Se excluye por la misma
+  // razón que is_adjustment (sección 3.1): ninguno de los dos es "gasto real".
+  const loanCategoryIds = new Set(categories.filter((c) => c.name === "Préstamo").map((c) => c.id));
+  const isExcluded = (t: TransactionLike) =>
+    t.is_adjustment || (t.category_id !== null && loanCategoryIds.has(t.category_id));
+  const expenses = transactions.filter((t) => t.type === "expense" && !isExcluded(t));
 
   const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
 

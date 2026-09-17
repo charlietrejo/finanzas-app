@@ -102,6 +102,7 @@ function tx(overrides: Partial<ProjectionTransactionLike>): ProjectionTransactio
     type: "expense",
     amount: 0,
     date: "2026-01-01",
+    is_adjustment: false,
     is_recurring: false,
     recurring_frequency: null,
     recurring_interval_days: null,
@@ -213,6 +214,25 @@ describe("projectNetWorth", () => {
 
     // Si los 300 recurrentes se hubieran restado del promedio, febrero daría 1400.
     // Al excluirlos, el promedio es solo el ingreso de 500.
+    expect(result[2]).toEqual({ month: "2026-02", netWorth: 1700, projected: true });
+  });
+
+  it("sección 3.1: excluye del promedio histórico las transacciones is_adjustment=true", () => {
+    const series = [
+      { month: "2025-12", netWorth: 1000, projected: false },
+      { month: "2026-01", netWorth: 1200, projected: false },
+    ];
+    const transactions = [
+      tx({ type: "income", amount: 500, date: "2026-01-10" }),
+      // Ajuste de saldo puntual (ej. comisión bancaria olvidada) — no debe
+      // promediarse como si fuera un patrón mensual de gasto.
+      tx({ type: "expense", amount: 300, date: "2026-01-12", is_adjustment: true }),
+    ];
+
+    const result = projectNetWorth(series, transactions, 1, 1);
+
+    // Si el ajuste se hubiera restado del promedio, febrero daría 1400.
+    // Al excluirlo, el promedio es solo el ingreso de 500.
     expect(result[2]).toEqual({ month: "2026-02", netWorth: 1700, projected: true });
   });
 });

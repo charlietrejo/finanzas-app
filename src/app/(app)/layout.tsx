@@ -23,9 +23,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const themeCookie = cookieStore.get("theme")?.value;
   const initialTheme = themeCookie === "dark" ? "dark" : "light";
 
-  const seed = user.email ?? user.id;
-  const avatarDesktop = blobatar(seed, { size: 36, background: "circle" });
-  const avatarMobile = blobatar(seed, { size: 32, background: "circle" });
+  // user.id (no email): estable aunque el usuario cambie su correo desde
+  // Seguridad (sección 3.7) — el email puede cambiar, el id de Supabase Auth no.
+  const avatarDesktop = blobatar(user.id, { size: 36, background: "circle" });
+  const avatarMobile = blobatar(user.id, { size: 32, background: "circle" });
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-cloud md:flex-row">
@@ -34,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="mb-8 flex items-center justify-between">
             <p className="text-xl font-light text-ink">Finanzas</p>
             {/* Sección 3.6.1/3.7 del doc: avatar (blobatar, determinístico
-                por email) en la esquina superior de todas las pantallas —
+                por user id) en la esquina superior de todas las pantallas —
                 abre Cuenta. */}
             <Link
               href="/profile"

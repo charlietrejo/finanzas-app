@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { computeMonthlyInsights } from "./monthly-insights";
 
 const CATEGORIES = [
-  { id: "vivienda", is_essential: true },
-  { id: "comida", is_essential: false },
+  { id: "vivienda", name: "Vivienda (renta/hipoteca)", is_essential: true },
+  { id: "comida", name: "Comida y supermercado", is_essential: false },
+  { id: "prestamo", name: "Préstamo", is_essential: false },
 ];
 
 describe("computeMonthlyInsights", () => {
@@ -61,6 +62,20 @@ describe("computeMonthlyInsights", () => {
         { type: "expense", amount: 5000, category_id: "vivienda", is_adjustment: false },
         { type: "expense", amount: 100, category_id: "vivienda", is_adjustment: true }, // ajuste esencial chico: no debe contar en nada
         { type: "expense", amount: 300, category_id: null, is_adjustment: true }, // ajuste sin categoría: tampoco
+      ],
+      CATEGORIES
+    );
+
+    expect(result.totalExpenses).toBe(5000);
+    expect(result.essentialExpenses).toBe(5000);
+    expect(result.antExpenseTotal).toBe(0);
+  });
+
+  it("sección 3.4.2: excluye la categoría 'Préstamo' del total, esenciales y gasto hormiga (prestar no es gastar)", () => {
+    const result = computeMonthlyInsights(
+      [
+        { type: "expense", amount: 5000, category_id: "vivienda", is_adjustment: false },
+        { type: "expense", amount: 150, category_id: "prestamo", is_adjustment: false }, // préstamo chico: tampoco cuenta como hormiga
       ],
       CATEGORIES
     );

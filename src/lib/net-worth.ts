@@ -108,6 +108,7 @@ export interface ProjectionTransactionLike {
   type: "income" | "expense" | "transfer";
   amount: number;
   date: string;
+  is_adjustment: boolean;
   is_recurring: boolean;
   recurring_frequency: RecurringFrequency | null;
   recurring_interval_days: number | null;
@@ -130,7 +131,11 @@ const MAX_RECURRING_ITERATIONS = 1000;
  * 1) `promedio_no_recurrente`: promedio del flujo neto (ingresos − gastos)
  *    de los últimos `historyMonths` meses, EXCLUYENDO transacciones
  *    is_recurring=true — si no se excluyeran, una recurrencia ya capturada
- *    explícitamente en (2) también se "diluiría" en este promedio.
+ *    explícitamente en (2) también se "diluiría" en este promedio. También
+ *    excluye is_adjustment=true (sección 3.1): una reconciliación de saldo
+ *    puntual (ej. una comisión bancaria olvidada durante meses) no es un
+ *    patrón que deba proyectarse hacia adelante — sí afecta el saldo
+ *    histórico real (computeNetWorthSeries), pero no la base del promedio.
  * 2) `recurrencias(mes)`: para cada plantilla activa (is_recurring=true),
  *    se avanza next_occurrence_date con advanceRecurringDate (mismo motor
  *    de Fase 8) ocurrencia por ocurrencia hasta el horizonte proyectado,
@@ -153,7 +158,7 @@ export function projectNetWorth(
   const { start: historyStart } = getMonthRange(historyWindow[0]);
   const { end: historyEnd } = getMonthRange(lastMonth);
   const nonRecurringFlow = transactions
-    .filter((t) => !t.is_recurring && t.date >= historyStart && t.date < historyEnd)
+    .filter((t) => !t.is_recurring && !t.is_adjustment && t.date >= historyStart && t.date < historyEnd)
     .reduce((sum, t) => {
       if (t.type === "income") return sum + t.amount;
       if (t.type === "expense") return sum - t.amount;
