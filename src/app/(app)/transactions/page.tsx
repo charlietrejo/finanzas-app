@@ -28,19 +28,23 @@ export interface TransactionRow {
   merchant: { name: string } | null;
 }
 
+const TRANSACTION_COLUMNS =
+  "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, recurring_is_automatic, next_occurrence_date, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)";
+
 export default async function TransactionsPage() {
   const supabase = await createClient();
 
-  const [{ data: transactions }, { data: accounts }, { data: creditCards }, { data: categories }, merchants] =
+  const [{ data: transactions }, { data: recurringTemplates }, { data: accounts }, { data: creditCards }, { data: categories }, merchants] =
     await Promise.all([
-      supabase
-        .from("transactions")
-        .select(
-          "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, recurring_is_automatic, next_occurrence_date, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
-        )
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(200),
+      supabase.from("transactions").select(TRANSACTION_COLUMNS).order("date", { ascending: false }).order("created_at", { ascending: false }).limit(200),
+      // Sección 3.4.1 del doc ("Ver mis recurrencias de un vistazo"): la
+      // pestaña "Recurrentes" debe mostrar TODAS las plantillas sin importar
+      // cuándo se crearon — una plantilla vieja podría haber quedado fuera
+      // del límite de 200 de la lista general si el usuario ya tiene más
+      // movimientos que eso desde entonces. Sin .limit() a propósito: las
+      // plantillas recurrentes son pocas por naturaleza (a diferencia del
+      // historial completo de movimientos).
+      supabase.from("transactions").select(TRANSACTION_COLUMNS).eq("is_recurring", true).order("date", { ascending: false }),
       supabase.from("accounts").select("*").is("archived_at", null).order("created_at", { ascending: true }),
       supabase
         .from("debts")
@@ -55,6 +59,7 @@ export default async function TransactionsPage() {
   return (
     <TransactionsClient
       transactions={(transactions ?? []) as unknown as TransactionRow[]}
+      recurringTemplates={(recurringTemplates ?? []) as unknown as TransactionRow[]}
       accounts={(accounts ?? []) as Account[]}
       creditCards={(creditCards ?? []) as Debt[]}
       categories={(categories ?? []) as Category[]}

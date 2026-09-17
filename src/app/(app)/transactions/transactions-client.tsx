@@ -24,6 +24,7 @@ import type { TransactionRow } from "./page";
 
 interface Props {
   transactions: TransactionRow[];
+  recurringTemplates: TransactionRow[];
   accounts: Account[];
   creditCards: Debt[];
   categories: Category[];
@@ -49,10 +50,24 @@ const RECURRING_FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
   custom: "Personalizada (cada N días)",
 };
 
-export function TransactionsClient({ transactions, accounts, creditCards, categories: initialCategories, merchants }: Props) {
+export function TransactionsClient({
+  transactions,
+  recurringTemplates,
+  accounts,
+  creditCards,
+  categories: initialCategories,
+  merchants,
+}: Props) {
   const [categories, setCategories] = useState(initialCategories);
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Sección 3.4.1 del doc ("Ver mis recurrencias de un vistazo"): "Todos"
+  // sigue siendo la lista normal (recientes, limitada a 200); "Recurrentes"
+  // usa recurringTemplates (todas las plantillas, sin límite ni filtro de
+  // fecha) — no es un filtro client-side sobre `transactions`, porque una
+  // plantilla vieja podría no estar entre los 200 movimientos más recientes.
+  const [filter, setFilter] = useState<"all" | "recurring">("all");
+  const visibleTransactions = filter === "recurring" ? recurringTemplates : transactions;
   // Sección 3.6.1 del doc: el botón central "+" del menú inferior enlaza a
   // /transactions?new=1 para abrir el formulario directo, sin pantalla
   // intermedia — inicializador perezoso, no un efecto que llame setState
@@ -66,7 +81,11 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
   // formulario cuando searchParams se actualice).
   const [confirmTemplate] = useState<TransactionRow | null>(() => {
     const templateId = searchParams.get("templateId");
-    return templateId ? transactions.find((t) => t.id === templateId) ?? null : null;
+    if (!templateId) return null;
+    // Busca también en recurringTemplates (no solo en transactions, limitada
+    // a los 200 movimientos más recientes): una plantilla vieja podría no
+    // estar ahí y sí en la lista completa de recurrentes.
+    return transactions.find((t) => t.id === templateId) ?? recurringTemplates.find((t) => t.id === templateId) ?? null;
   });
 
   // La limpieza de la URL sí es un efecto legítimo (sincroniza con el
@@ -120,13 +139,34 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
         />
       )}
 
-      {transactions.length === 0 && !creating ? (
+      {/* Sección 3.4.1 del doc ("Ver mis recurrencias de un vistazo"):
+          responde "¿cuáles son mis gastos domiciliados?" sin tener que
+          buscar entre el historial completo. */}
+      <div className="flex items-center gap-1">
+        {(["all", "recurring"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            aria-pressed={filter === f}
+            className={
+              "min-h-11 rounded-pill px-4 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet " +
+              (filter === f ? "bg-monday-violet text-white" : "bg-pebble/40 text-slate hover:bg-pebble/60")
+            }
+          >
+            {f === "all" ? "Todos" : "Recurrentes"}
+          </button>
+        ))}
+      </div>
+
+      {visibleTransactions.length === 0 && !creating ? (
         <Card>
-          <p className="text-sm text-slate">Aún no tienes movimientos registrados.</p>
+          <p className="text-sm text-slate">
+            {filter === "recurring" ? "No tienes plantillas recurrentes." : "Aún no tienes movimientos registrados."}
+          </p>
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {transactions.map((t) =>
+          {visibleTransactions.map((t) =>
             editingId === t.id ? (
               <TransactionForm
                 key={t.id}
@@ -143,12 +183,13 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={TYPE_BADGE_TONE[t.type]}>{TYPE_LABELS[t.type]}</Badge>
-                    {/* Sección 3.4.1 del doc ("Eliminar una recurrencia"): toda
-                        plantilla (is_recurring=true) debe mostrarse marcada
-                        como tal en la lista. */}
+                    {/* Sección 3.4.1 del doc ("Ver mis recurrencias de un
+                        vistazo"): toda plantilla (is_recurring=true) se
+                        marca como tal, distinguiendo domiciliada de manual
+                        (antes un solo badge genérico "Recurrente"). */}
                     {t.is_recurring && (
-                      <Badge tone="info" className="gap-1">
-                        <Repeat size={12} /> Recurrente
+                      <Badge tone={t.recurring_is_automatic ? "info" : "warning"} className="gap-1">
+                        <Repeat size={12} /> {t.recurring_is_automatic ? "Domiciliado" : "Manual"}
                       </Badge>
                     )}
                     <span className="text-xs text-slate">{formatDate(t.date)}</span>
@@ -185,8 +226,18 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
                   >
                     <Pencil size={16} />
                   </button>
-                  {t.is_recurring && <StopRecurringButton id={t.id} name={t.note || t.category?.name || "esta plantilla"} />}
-                  <DeleteTransactionButton id={t.id} />
+                  {/* Sección 3.4.1 del doc ("Los dos botones de eliminar
+                      nunca coexisten en la misma fila"): una plantilla
+                      (is_recurring=true) solo ofrece "Eliminar recurrencia"
+                      — el genérico revertiría el saldo de su primera
+                      ocurrencia de forma incorrecta. Una ocurrencia normal
+                      solo ofrece el genérico; el concepto de "recurrencia"
+                      no le aplica. */}
+                  {t.is_recurring ? (
+                    <StopRecurringButton id={t.id} name={t.note || t.category?.name || "esta plantilla"} />
+                  ) : (
+                    <DeleteTransactionButton id={t.id} />
+                  )}
                 </div>
               </Card>
             )
