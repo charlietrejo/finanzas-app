@@ -10,6 +10,12 @@ export interface UpcomingPayment {
   amount: number | null;
   dueDate: string;
   daysUntil: number;
+  // Solo se llenan para source="recurring_transaction" (secciones 3.2/3.4.1
+  // del doc): templateId identifica la plantilla para el botón "Registrar
+  // ahora"; isAutomatic decide si ese botón se muestra (solo en manuales,
+  // false) o el recordatorio es puramente informativo (true).
+  templateId?: string;
+  isAutomatic?: boolean;
 }
 
 function daysInMonth(year: number, monthIndex: number): number {
@@ -73,11 +79,13 @@ function toUpcoming(
   name: string,
   amount: number | null,
   due: Date,
-  today: Date
+  today: Date,
+  templateId?: string,
+  isAutomatic?: boolean
 ): UpcomingPayment {
   const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const daysUntil = Math.round((due.getTime() - todayMidnight.getTime()) / 86_400_000);
-  return { key, source, name, amount, dueDate: due.toISOString().slice(0, 10), daysUntil };
+  return { key, source, name, amount, dueDate: due.toISOString().slice(0, 10), daysUntil, templateId, isAutomatic };
 }
 
 interface DebtLike {
@@ -98,6 +106,10 @@ interface RecurringTransactionLike {
   recurring_frequency: RecurringFrequency | null;
   recurring_interval_days: number | null;
   recurring_end_date: string | null;
+  // Secciones 3.2/3.4.1 del doc: opcional para no romper llamadores/tests
+  // previos a esta columna — ausente se trata como automático (mismo
+  // default que la columna en BD, ver 024_recurring_is_automatic.sql).
+  recurring_is_automatic?: boolean;
 }
 
 /**
@@ -160,7 +172,16 @@ export function getUpcomingPayments(
       if (next.getTime() > end.getTime()) continue;
     }
     upcoming.push(
-      toUpcoming(`recurring_transaction:${tx.id}`, "recurring_transaction", tx.note || "Movimiento recurrente", tx.amount, next, today)
+      toUpcoming(
+        `recurring_transaction:${tx.id}`,
+        "recurring_transaction",
+        tx.note || "Movimiento recurrente",
+        tx.amount,
+        next,
+        today,
+        tx.id,
+        tx.recurring_is_automatic ?? true
+      )
     );
   }
 

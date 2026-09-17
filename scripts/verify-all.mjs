@@ -101,6 +101,10 @@ const SUITES = [
     env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }),
   },
   {
+    name: "verify-confirm-recurring-occurrence.mjs",
+    env: () => ({ TEST_USER_EMAIL: EMAIL_A, TEST_USER_PASSWORD: TEST_PASSWORD }),
+  },
+  {
     name: "verify-cross-user-isolation.mjs",
     env: () => ({
       USER_A_EMAIL: EMAIL_A,

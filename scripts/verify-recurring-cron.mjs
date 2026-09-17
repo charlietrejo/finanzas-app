@@ -244,6 +244,36 @@ async function main() {
 
     const { data: expiredAfter } = await supabase.from("transactions").select("next_occurrence_date").eq("id", expired.id).single();
     check("next_occurrence_date de la recurrencia vencida no se movió", expiredAfter.next_occurrence_date === oneMonthAgo);
+
+    console.log("\n4) Secciones 3.2/3.4.1: una plantilla MANUAL (recurring_is_automatic=false) nunca se genera sola");
+    const manualTemplate = await createTemplate(userId, account.id, {
+      date: twoMonthsAgo,
+      recurring_frequency: "weekly",
+      next_occurrence_date: oneMonthAgo,
+      recurring_is_automatic: false,
+      note: "Renta en efectivo",
+      amount: 400,
+    });
+
+    const { data: manualRun, error: manualError } = await supabase.rpc("generate_recurring_occurrence", {
+      p_template_id: manualTemplate.id,
+      p_next_occurrence_date: isoDate(addDaysUTC(new Date(`${oneMonthAgo}T00:00:00Z`), 7)),
+    });
+    check("no da error al procesar una plantilla manual", !manualError);
+    check("no genera nada porque la plantilla es manual (el cron la ignora)", manualRun === null);
+
+    const { data: manualAfter } = await supabase
+      .from("transactions")
+      .select("next_occurrence_date")
+      .eq("id", manualTemplate.id)
+      .single();
+    check(
+      "next_occurrence_date de la plantilla manual NO avanzó (solo avanza vía confirm_recurring_occurrence, botón 'Registrar ahora')",
+      manualAfter.next_occurrence_date === oneMonthAgo
+    );
+
+    const manualOccurrenceCount = await countMatchingOccurrences(userId, account.id, 400, oneMonthAgo);
+    check("no se creó ninguna transacción real para la plantilla manual", manualOccurrenceCount === 0);
   } finally {
     console.log("\nLimpiando datos de prueba...");
     if (createdTxIds.length > 0) await supabase.from("transactions").delete().in("id", createdTxIds);

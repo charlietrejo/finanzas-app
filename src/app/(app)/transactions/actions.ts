@@ -45,6 +45,7 @@ function parseFormData(formData: FormData) {
     recurring_frequency: isRecurring ? formData.get("recurring_frequency") || null : null,
     recurring_interval_days: isRecurring ? formData.get("recurring_interval_days") || null : null,
     recurring_end_date: isRecurring ? formData.get("recurring_end_date") || null : null,
+    recurring_is_automatic: isRecurring ? formData.get("recurring_is_automatic") !== "false" : true,
   });
 }
 
@@ -72,6 +73,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
     p_recurring_interval_days: d.recurring_interval_days ?? null,
     p_recurring_end_date: d.recurring_end_date ?? null,
     p_next_occurrence_date: computeNextOccurrenceDate(d),
+    p_recurring_is_automatic: d.recurring_is_automatic ?? true,
   });
 
   if (error) {
@@ -114,6 +116,7 @@ export async function updateTransaction(
     p_recurring_interval_days: d.recurring_interval_days ?? null,
     p_recurring_end_date: d.recurring_end_date ?? null,
     p_next_occurrence_date: computeNextOccurrenceDate(d),
+    p_recurring_is_automatic: d.recurring_is_automatic ?? true,
   });
 
   if (error) {
@@ -184,6 +187,83 @@ export async function createLoanGiven(_prev: ActionState, formData: FormData): P
   revalidatePath("/accounts");
   revalidatePath("/debts");
   revalidatePath("/loans");
+  return null;
+}
+
+/**
+ * Secciones 3.2/3.4.1 del doc: botón "Registrar ahora" del Dashboard, para
+ * confirmar a mano la ocurrencia de una plantilla recurrente MANUAL
+ * (recurring_is_automatic=false) — crea la transacción real (is_recurring
+ * =false) y avanza next_occurrence_date de la plantilla, de forma atómica
+ * (confirm_recurring_occurrence, 024_recurring_is_automatic.sql). El cron
+ * de generate-recurring nunca toca una plantilla manual: este es el ÚNICO
+ * camino por el que su next_occurrence_date avanza.
+ */
+export async function confirmRecurringOccurrence(
+  templateId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const { account_id, debt_id } = splitPayWith(formData.get("pay_with"));
+  const parsed = transactionFormSchema.safeParse({
+    type: formData.get("type"),
+    account_id,
+    debt_id,
+    to_account_id: null,
+    category_id: formData.get("category_id") || null,
+    merchant_id: formData.get("merchant_id") || null,
+    amount: formData.get("amount"),
+    date: formData.get("date"),
+    note: formData.get("note") || null,
+    tags: (formData.get("tags") as string | null)
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+    is_recurring: false,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const { data: template, error: templateError } = await supabase
+    .from("transactions")
+    .select("next_occurrence_date, recurring_frequency, recurring_interval_days")
+    .eq("id", templateId)
+    .single();
+  if (templateError || !template?.next_occurrence_date || !template.recurring_frequency) {
+    return { error: "Plantilla recurrente no encontrada" };
+  }
+
+  const nextOccurrenceDate = advanceRecurringDate(
+    template.next_occurrence_date,
+    template.recurring_frequency,
+    template.recurring_interval_days
+  );
+
+  const { error } = await supabase.rpc("confirm_recurring_occurrence", {
+    p_template_id: templateId,
+    p_next_occurrence_date: nextOccurrenceDate,
+    p_account_id: d.account_id ?? null,
+    p_debt_id: d.debt_id ?? null,
+    p_type: d.type,
+    p_amount: d.amount,
+    p_date: d.date,
+    p_category_id: d.category_id ?? null,
+    p_merchant_id: d.merchant_id ?? null,
+    p_note: d.note ?? null,
+    p_tags: d.tags ?? [],
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/accounts");
+  revalidatePath("/debts");
   return null;
 }
 

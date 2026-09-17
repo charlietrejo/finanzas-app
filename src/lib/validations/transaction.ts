@@ -16,6 +16,9 @@ export const transactionFormSchema = z
     recurring_frequency: z.enum(["weekly", "monthly", "annual", "custom"]).optional().nullable(),
     recurring_interval_days: z.coerce.number().int().positive().optional().nullable(),
     recurring_end_date: z.string().optional().nullable(),
+    // Secciones 3.2/3.4.1 del doc: domiciliado/automático (default, el cron
+    // la genera sola) vs. manual (el cron la ignora, solo recordatorio).
+    recurring_is_automatic: z.boolean().optional().default(true),
   })
   .refine((data) => data.type !== "transfer" || !!data.to_account_id, {
     message: "Selecciona la cuenta destino",

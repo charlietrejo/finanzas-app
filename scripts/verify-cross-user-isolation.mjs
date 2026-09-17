@@ -142,6 +142,25 @@ async function main() {
     p_date: new Date().toISOString().slice(0, 10),
   });
 
+  // Plantilla recurrente MANUAL de A (secciones 3.2/3.4.1), para probar que
+  // B no puede confirmar su ocurrencia vía confirm_recurring_occurrence.
+  const { data: manualTemplateA } = await clientA
+    .from("transactions")
+    .insert({
+      user_id: userIdA,
+      account_id: accA.id,
+      type: "expense",
+      amount: 400,
+      date: new Date().toISOString().slice(0, 10),
+      is_recurring: true,
+      recurring_frequency: "weekly",
+      next_occurrence_date: new Date().toISOString().slice(0, 10),
+      recurring_is_automatic: false,
+      tags: [],
+    })
+    .select()
+    .single();
+
   console.log("\n1) B no puede LEER datos de A");
   const readTests = [
     ["accounts", accA.id],
@@ -284,6 +303,17 @@ async function main() {
     p_real_balance: 999,
   });
   check("adjust_account_balance rechaza account_id ajeno", !!rpcAdjustBalanceCross);
+
+  const { error: rpcConfirmRecurringCross } = await clientB.rpc("confirm_recurring_occurrence", {
+    p_template_id: manualTemplateA.id,
+    p_next_occurrence_date: new Date().toISOString().slice(0, 10),
+    p_account_id: accB.id,
+    p_debt_id: null,
+    p_type: "expense",
+    p_amount: 10,
+    p_date: new Date().toISOString().slice(0, 10),
+  });
+  check("confirm_recurring_occurrence rechaza template_id ajeno", !!rpcConfirmRecurringCross);
 
   console.log("\nLimpiando datos de prueba...");
   await clientA.from("goals").delete().eq("id", goalA.id);

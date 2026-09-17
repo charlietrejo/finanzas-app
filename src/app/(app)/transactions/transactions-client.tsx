@@ -15,6 +15,7 @@ import {
   updateTransaction,
   createCategory,
   createLoanGiven,
+  confirmRecurringOccurrence,
   type ActionState,
 } from "./actions";
 import type { Account, Category, Debt, Merchant, RecurringFrequency, TransactionType } from "@/types/database";
@@ -57,6 +58,15 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
   // (evita el cascading render que marca react-hooks/set-state-in-effect).
   const [creating, setCreating] = useState(() => searchParams.get("new") === "1");
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Secciones 3.2/3.4.1 del doc: el botón "Registrar ahora" del Dashboard
+  // enlaza a /transactions?new=1&templateId=<id> — capturado una sola vez
+  // al montar (mismo motivo que `creating`: el efecto de abajo limpia la
+  // URL poco después, y no queremos que la plantilla desaparezca a medio
+  // formulario cuando searchParams se actualice).
+  const [confirmTemplate] = useState<TransactionRow | null>(() => {
+    const templateId = searchParams.get("templateId");
+    return templateId ? transactions.find((t) => t.id === templateId) ?? null : null;
+  });
 
   // La limpieza de la URL sí es un efecto legítimo (sincroniza con el
   // router, un sistema externo) — no llama setState, así que no dispara esa
@@ -103,6 +113,7 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
           creditCards={creditCards}
           categories={categories}
           merchants={merchants}
+          confirmTemplate={confirmTemplate ?? undefined}
           onAddCategory={addCategory}
           onDone={() => setCreating(false)}
         />
@@ -206,6 +217,7 @@ function TransactionForm({
   categories,
   merchants,
   transaction,
+  confirmTemplate,
   onAddCategory,
   onDone,
 }: {
@@ -214,31 +226,39 @@ function TransactionForm({
   categories: Category[];
   merchants: Merchant[];
   transaction?: TransactionRow;
+  confirmTemplate?: TransactionRow;
   onAddCategory: (c: Category) => void;
   onDone: () => void;
 }) {
   const isEdit = !!transaction;
-  const [type, setType] = useState<TransactionType>(transaction?.type ?? "expense");
+  // Secciones 3.2/3.4.1 del doc: "Registrar ahora" abre este mismo formulario
+  // prellenado (monto, categoría, cuenta) desde la plantilla recurrente
+  // manual — crea un movimiento nuevo de una sola ocurrencia, no edita la
+  // plantilla, así que solo se usa para los defaults, nunca como `isEdit`.
+  const isConfirm = !!confirmTemplate;
+  const prefillSource = confirmTemplate ?? transaction;
+  const [type, setType] = useState<TransactionType>(prefillSource?.type ?? "expense");
   const payWithOptions = useMemo(() => {
     const accountOpts = accounts.map((a) => ({ value: `account:${a.id}`, label: a.name }));
     if (type !== "expense") return accountOpts;
     const cardOpts = creditCards.map((d) => ({ value: `debt:${d.id}`, label: `${d.name} (tarjeta)` }));
     return [...accountOpts, ...cardOpts];
   }, [accounts, creditCards, type]);
-  const defaultPayWith = transaction?.debt_id
-    ? `debt:${transaction.debt_id}`
-    : transaction?.account_id
-      ? `account:${transaction.account_id}`
+  const defaultPayWith = prefillSource?.debt_id
+    ? `debt:${prefillSource.debt_id}`
+    : prefillSource?.account_id
+      ? `account:${prefillSource.account_id}`
       : payWithOptions[0]?.value;
   const [merchantQuery, setMerchantQuery] = useState(transaction?.merchant?.name ?? "");
   const [merchantId, setMerchantId] = useState<string>(transaction?.merchant_id ?? "");
-  const [categoryId, setCategoryId] = useState<string>(transaction?.category_id ?? "");
+  const [categoryId, setCategoryId] = useState<string>(prefillSource?.category_id ?? "");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showMerchantList, setShowMerchantList] = useState(false);
   const [isRecurring, setIsRecurring] = useState((transaction?.is_recurring ?? false) && type !== "transfer");
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>(
     transaction?.recurring_frequency ?? "monthly"
   );
+  const [recurringIsAutomatic, setRecurringIsAutomatic] = useState(transaction?.recurring_is_automatic ?? true);
 
   const filteredMerchants = useMemo(() => {
     if (!merchantQuery.trim()) return merchants.slice(0, 8);
@@ -254,18 +274,25 @@ function TransactionForm({
   // Sección 3.4.2 del doc: "Préstamo" es una categoría especial — se
   // identifica por nombre (igual que la sugerencia de categoría por
   // comercio, más abajo) porque categories no tiene un flag "especial"
-  // propio. Solo aplica al CREAR (no al editar un movimiento ya existente:
-  // esta pantalla no reconvierte un gasto normal en préstamo a medio camino).
-  const isNewLoan = !isEdit && type === "expense" && categories.find((c) => c.id === categoryId)?.name === "Préstamo";
+  // propio. Solo aplica al CREAR (no al editar un movimiento ya existente,
+  // ni al confirmar una ocurrencia recurrente: ninguna plantilla recurrente
+  // usa la categoría "Préstamo", sección 3.4.2).
+  const isNewLoan =
+    !isEdit && !isConfirm && type === "expense" && categories.find((c) => c.id === categoryId)?.name === "Préstamo";
 
-  const action = isEdit
-    ? (updateTransaction as (id: string, prev: ActionState, fd: FormData) => Promise<ActionState>).bind(
+  const action = isConfirm
+    ? (confirmRecurringOccurrence as (id: string, prev: ActionState, fd: FormData) => Promise<ActionState>).bind(
         null,
-        transaction!.id
+        confirmTemplate!.id
       )
-    : isNewLoan
-      ? createLoanGiven
-      : createTransaction;
+    : isEdit
+      ? (updateTransaction as (id: string, prev: ActionState, fd: FormData) => Promise<ActionState>).bind(
+          null,
+          transaction!.id
+        )
+      : isNewLoan
+        ? createLoanGiven
+        : createTransaction;
 
   const [state, formAction, pending] = useActionState<ActionState, FormData>(async (prev, fd) => {
     const result = await action(prev, fd);
@@ -304,7 +331,13 @@ function TransactionForm({
   return (
     <Card className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-medium text-ink">{isEdit ? "Editar movimiento" : "Nuevo movimiento"}</h2>
+        <h2 className="font-medium text-ink">
+          {isConfirm
+            ? `Registrar: ${confirmTemplate!.note || confirmTemplate!.category?.name || "movimiento recurrente"}`
+            : isEdit
+              ? "Editar movimiento"
+              : "Nuevo movimiento"}
+        </h2>
         <button onClick={onDone} aria-label="Cerrar" className="flex h-11 w-11 items-center justify-center rounded-badge text-slate transition-colors hover:bg-pebble/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet">
           <X size={18} />
         </button>
@@ -329,7 +362,10 @@ function TransactionForm({
           </Select>
         </div>
 
-        {type !== "transfer" && (
+        {/* Secciones 3.2/3.4.1 del doc: "Registrar ahora" crea un movimiento
+            de una sola ocurrencia — nunca se vuelve a preguntar si es
+            recurrente (la plantilla ya existe y sigue siendo la que manda). */}
+        {type !== "transfer" && !isConfirm && (
           <div className="flex flex-col gap-3 rounded-card bg-cloud p-4">
             <div className="flex items-center gap-2">
               <input
@@ -387,6 +423,19 @@ function TransactionForm({
                     defaultValue={transaction?.recurring_end_date ?? ""}
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="recurring_is_automatic">¿Se cobra solo o lo registras tú?</Label>
+                  <Select
+                    id="recurring_is_automatic"
+                    name="recurring_is_automatic"
+                    value={recurringIsAutomatic ? "true" : "false"}
+                    onChange={(e) => setRecurringIsAutomatic(e.target.value === "true")}
+                  >
+                    <option value="true">Domiciliado / automático</option>
+                    <option value="false">Manual (yo lo registro)</option>
+                  </Select>
+                </div>
               </div>
             )}
           </div>
@@ -431,7 +480,7 @@ function TransactionForm({
               step="0.01"
               min="0.01"
               required
-              defaultValue={transaction?.amount}
+              defaultValue={prefillSource?.amount}
             />
           </div>
 

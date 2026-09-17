@@ -182,14 +182,28 @@ export default async function DashboardPage() {
           </div>
           <ul className="flex flex-col gap-2">
             {upcomingPayments.map((p) => (
-              <li key={p.key} className="flex items-center justify-between text-sm">
+              <li key={p.key} className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-ink">
                   {p.name}
                   {p.amount != null && <span className="text-slate"> · {formatMXN(p.amount)}</span>}
                 </span>
-                <Badge tone={p.daysUntil <= 2 ? "danger" : "warning"}>
-                  {p.daysUntil === 0 ? "Vence hoy" : p.daysUntil === 1 ? "Vence mañana" : `Vence en ${p.daysUntil} días`}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* Secciones 3.2/3.4.1 del doc: solo las recurrencias
+                      MANUALES (recurring_is_automatic=false) llevan este
+                      botón — las automáticas ya se van a generar solas, el
+                      recordatorio es puramente informativo. */}
+                  {p.source === "recurring_transaction" && p.isAutomatic === false && (
+                    <Link
+                      href={`/transactions?new=1&templateId=${p.templateId}`}
+                      className="rounded-pill bg-monday-violet px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-monday-violet/90"
+                    >
+                      Registrar ahora
+                    </Link>
+                  )}
+                  <Badge tone={p.daysUntil <= 2 ? "danger" : "warning"}>
+                    {p.daysUntil === 0 ? "Vence hoy" : p.daysUntil === 1 ? "Vence mañana" : `Vence en ${p.daysUntil} días`}
+                  </Badge>
+                </div>
               </li>
             ))}
           </ul>

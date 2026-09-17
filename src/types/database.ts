@@ -168,6 +168,12 @@ export type Transaction = {
   // recurrencias (cron) lo usa para saber cuándo generar la siguiente
   // ocurrencia real, y lo avanza un periodo cada vez que genera una.
   next_occurrence_date: string | null;
+  // Secciones 3.2/3.4.1/Fase 8: solo tiene sentido si is_recurring=true.
+  // true (domiciliado/automático) = el cron la genera sola. false (manual)
+  // = el cron la ignora, solo aparece como recordatorio "Registrar ahora"
+  // en el Dashboard, y next_occurrence_date solo avanza cuando el usuario
+  // confirma vía confirm_recurring_occurrence.
+  recurring_is_automatic: boolean;
   created_at: string;
 };
 
@@ -212,11 +218,12 @@ export interface Database {
       };
       transactions: {
         Row: Transaction;
-        Insert: Omit<Transaction, "id" | "user_id" | "created_at" | "is_adjustment"> & {
+        Insert: Omit<Transaction, "id" | "user_id" | "created_at" | "is_adjustment" | "recurring_is_automatic"> & {
           id?: string;
           user_id?: string;
           created_at?: string;
           is_adjustment?: boolean;
+          recurring_is_automatic?: boolean;
         };
         Update: Partial<Omit<Transaction, "id" | "user_id">>;
         Relationships: [];
@@ -339,6 +346,7 @@ export interface Database {
           p_recurring_interval_days?: number | null;
           p_recurring_end_date?: string | null;
           p_next_occurrence_date?: string | null;
+          p_recurring_is_automatic?: boolean;
         };
         Returns: Transaction;
       };
@@ -360,12 +368,33 @@ export interface Database {
           p_recurring_interval_days?: number | null;
           p_recurring_end_date?: string | null;
           p_next_occurrence_date?: string | null;
+          p_recurring_is_automatic?: boolean;
         };
         Returns: Transaction;
       };
       delete_transaction: {
         Args: { p_id: string };
         Returns: void;
+      };
+      // Secciones 3.2/3.4.1 del doc (024_recurring_is_automatic.sql): botón
+      // "Registrar ahora" del Dashboard, para confirmar a mano la ocurrencia
+      // de una plantilla recurrente MANUAL. p_next_occurrence_date ya viene
+      // calculado por el llamador (mismo patrón que generate_recurring_occurrence).
+      confirm_recurring_occurrence: {
+        Args: {
+          p_template_id: string;
+          p_next_occurrence_date: string;
+          p_account_id: string | null;
+          p_debt_id: string | null;
+          p_type: TransactionType;
+          p_amount: number;
+          p_date: string;
+          p_category_id?: string | null;
+          p_merchant_id?: string | null;
+          p_note?: string | null;
+          p_tags?: string[];
+        };
+        Returns: Transaction;
       };
       // Fase 8: solo invocable con el service role key (ver
       // 019_recurring_engine.sql / 020_fix_recurring_null_serialization.sql).

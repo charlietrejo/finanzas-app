@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
     .from("transactions")
     .select("id, next_occurrence_date, recurring_frequency, recurring_interval_days")
     .eq("is_recurring", true)
+    // Secciones 3.2/3.4.1 del doc: solo domiciliadas/automáticas — las
+    // manuales (recurring_is_automatic=false) nunca se generan solas, se
+    // manejan como recordatorio "Registrar ahora" en el Dashboard.
+    .eq("recurring_is_automatic", true)
     .lte("next_occurrence_date", today)
     .or(`recurring_end_date.is.null,recurring_end_date.gte.${today}`)
     .returns<EligibleTemplate[]>();

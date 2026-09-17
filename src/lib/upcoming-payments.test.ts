@@ -267,6 +267,91 @@ describe("getUpcomingPayments — transacciones recurrentes", () => {
   });
 });
 
+describe("getUpcomingPayments — secciones 3.2/3.4.1: recurrencia domiciliada/automática vs. manual", () => {
+  it("recurrencia automática (default): isAutomatic true, templateId presente", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            id: "t1",
+            note: "Netflix",
+            amount: 219,
+            date: "2026-03-01",
+            recurring_frequency: "monthly",
+            recurring_interval_days: null,
+            recurring_end_date: null,
+            recurring_is_automatic: true,
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result).toEqual([
+      {
+        key: "recurring_transaction:t1",
+        source: "recurring_transaction",
+        name: "Netflix",
+        amount: 219,
+        dueDate: "2026-03-01",
+        daysUntil: 0,
+        templateId: "t1",
+        isAutomatic: true,
+      },
+    ]);
+  });
+
+  it("recurrencia manual: isAutomatic false", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            id: "t2",
+            note: "Renta en efectivo",
+            amount: 400,
+            date: "2026-03-01",
+            recurring_frequency: "weekly",
+            recurring_interval_days: null,
+            recurring_end_date: null,
+            recurring_is_automatic: false,
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result[0]).toMatchObject({ templateId: "t2", isAutomatic: false });
+  });
+
+  it("sin recurring_is_automatic (dato previo a la columna) se trata como automática", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            id: "t3",
+            note: "Legacy",
+            amount: 100,
+            date: "2026-03-01",
+            recurring_frequency: "weekly",
+            recurring_interval_days: null,
+            recurring_end_date: null,
+          },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result[0].isAutomatic).toBe(true);
+  });
+
+  it("las fuentes que no son recurrentes (deuda/tarjeta) no llevan templateId ni isAutomatic", () => {
+    const result = getUpcomingPayments(
+      { debts: [{ id: "d1", name: "Préstamo", type: "loan", due_day: 2, payment_due_day: null }] },
+      new Date("2026-03-01T00:00:00Z"),
+      7
+    );
+    expect(result[0].templateId).toBeUndefined();
+    expect(result[0].isAutomatic).toBeUndefined();
+  });
+});
+
 describe("getUpcomingPayments — combinado", () => {
   it("unifica deudas y transacciones recurrentes, filtra fuera de ventana y ordena por cercanía", () => {
     const result = getUpcomingPayments(
