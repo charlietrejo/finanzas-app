@@ -20,6 +20,7 @@ export interface TransactionRow {
   recurring_interval_days: number | null;
   recurring_end_date: string | null;
   recurring_is_automatic: boolean;
+  next_occurrence_date: string | null;
   account: { name: string } | null;
   debt: { name: string } | null;
   to_account: { name: string } | null;
@@ -35,7 +36,7 @@ export default async function TransactionsPage() {
       supabase
         .from("transactions")
         .select(
-          "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, recurring_is_automatic, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
+          "id, account_id, debt_id, to_account_id, category_id, merchant_id, type, amount, date, note, tags, is_recurring, recurring_frequency, recurring_interval_days, recurring_end_date, recurring_is_automatic, next_occurrence_date, account:accounts!transactions_account_id_fkey(name), debt:debts(name), to_account:accounts!transactions_to_account_id_fkey(name), category:categories(name), merchant:merchants(name)"
         )
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })

@@ -181,31 +181,53 @@ export default async function DashboardPage() {
             <p className="text-lg font-medium text-ink">Recordatorios de pago</p>
           </div>
           <ul className="flex flex-col gap-2">
-            {upcomingPayments.map((p) => (
-              <li key={p.key} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-ink">
-                  {p.name}
-                  {p.amount != null && <span className="text-slate"> · {formatMXN(p.amount)}</span>}
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  {/* Secciones 3.2/3.4.1 del doc: solo las recurrencias
-                      MANUALES (recurring_is_automatic=false) llevan este
-                      botón — las automáticas ya se van a generar solas, el
-                      recordatorio es puramente informativo. */}
-                  {p.source === "recurring_transaction" && p.isAutomatic === false && (
-                    <Link
-                      href={`/transactions?new=1&templateId=${p.templateId}`}
-                      className="rounded-pill bg-monday-violet px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-monday-violet/90"
-                    >
-                      Registrar ahora
-                    </Link>
-                  )}
-                  <Badge tone={p.daysUntil <= 2 ? "danger" : "warning"}>
-                    {p.daysUntil === 0 ? "Vence hoy" : p.daysUntil === 1 ? "Vence mañana" : `Vence en ${p.daysUntil} días`}
-                  </Badge>
-                </div>
-              </li>
-            ))}
+            {upcomingPayments.map((p) => {
+              // Secciones 3.2/3.4.1 del doc: solo las recurrencias MANUALES
+              // (recurring_is_automatic=false) llevan botón y conteo de
+              // atrasados — las automáticas ya se van a generar solas, el
+              // recordatorio es puramente informativo.
+              const isManualRecurring = p.source === "recurring_transaction" && p.isAutomatic === false;
+              const showAccumulated = isManualRecurring && (p.overdueCount ?? 0) >= 2;
+              return (
+                <li key={p.key} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-ink">
+                    {showAccumulated ? (
+                      <>
+                        Llevas {p.overdueCount} pagos de {formatMXN(p.amount ?? 0)} sin registrar
+                        <span className="text-slate">
+                          {" "}
+                          · {formatMXN((p.overdueCount ?? 0) * (p.amount ?? 0))} atrasados, desde hace {p.daysLate} días
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {p.name}
+                        {p.amount != null && <span className="text-slate"> · {formatMXN(p.amount)}</span>}
+                      </>
+                    )}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {isManualRecurring && (
+                      <Link
+                        href={`/transactions?new=1&templateId=${p.templateId}`}
+                        className="rounded-pill bg-monday-violet px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-monday-violet/90"
+                      >
+                        Marcar como pagada
+                      </Link>
+                    )}
+                    <Badge tone={p.daysUntil <= 2 ? "danger" : "warning"}>
+                      {p.daysUntil < 0
+                        ? "Vencido"
+                        : p.daysUntil === 0
+                          ? "Vence hoy"
+                          : p.daysUntil === 1
+                            ? "Vence mañana"
+                            : `Vence en ${p.daysUntil} días`}
+                    </Badge>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </Card>
       )}

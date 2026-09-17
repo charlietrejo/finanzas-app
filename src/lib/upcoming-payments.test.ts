@@ -308,7 +308,8 @@ describe("getUpcomingPayments — secciones 3.2/3.4.1: recurrencia domiciliada/a
             id: "t2",
             note: "Renta en efectivo",
             amount: 400,
-            date: "2026-03-01",
+            date: "2026-02-01",
+            next_occurrence_date: "2026-03-01",
             recurring_frequency: "weekly",
             recurring_interval_days: null,
             recurring_end_date: null,
@@ -349,6 +350,132 @@ describe("getUpcomingPayments — secciones 3.2/3.4.1: recurrencia domiciliada/a
     );
     expect(result[0].templateId).toBeUndefined();
     expect(result[0].isAutomatic).toBeUndefined();
+  });
+});
+
+describe("getUpcomingPayments — sección 3.4.1: persistencia y acumulación de recordatorios manuales", () => {
+  const MANUAL_BASE = {
+    id: "m1",
+    note: "Renta en efectivo",
+    amount: 400,
+    date: "2026-01-01",
+    recurring_frequency: "weekly" as const,
+    recurring_interval_days: null,
+    recurring_end_date: null,
+    recurring_is_automatic: false,
+  };
+
+  it("ventana propia de 3 días: aparece 3 días antes de next_occurrence_date, no 4", () => {
+    const dueMonday = "2026-03-09"; // lunes
+    const threeDaysBefore = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: dueMonday }] },
+      new Date("2026-03-06T00:00:00Z") // viernes
+    );
+    expect(threeDaysBefore).toHaveLength(1);
+
+    const fourDaysBefore = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: dueMonday }] },
+      new Date("2026-03-05T00:00:00Z") // jueves
+    );
+    expect(fourDaysBefore).toHaveLength(0);
+  });
+
+  it("la ventana manual (3 días) es independiente de withinDays general: no se ensancha aunque withinDays sea mayor a 3", () => {
+    const result = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-03-10" }] },
+      new Date("2026-03-01T00:00:00Z"),
+      30
+    );
+    expect(result).toHaveLength(0);
+  });
+
+  it("persistencia: sigue visible aunque hayan pasado muchos días de la fecha, sin saltar de periodo solo", () => {
+    const result = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-01-05" }] },
+      new Date("2026-03-01T00:00:00Z"), // 55 días después
+      5
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].dueDate).toBe("2026-01-05"); // no se movió al periodo "actual"
+    expect(result[0].daysUntil).toBeLessThan(0);
+  });
+
+  it("vence hoy: overdueCount=1 (no todavía 'atrasado múltiple')", () => {
+    const result = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-03-01" }] },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result[0].overdueCount).toBe(1);
+  });
+
+  it("semanal: 10 días tarde acumula 2 pagos atrasados ($800), no se pierde el conteo", () => {
+    const result = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-02-19" }] }, // 10 días antes
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result[0]).toMatchObject({ overdueCount: 2, daysLate: 10 });
+  });
+
+  it("mensual: mismo comportamiento de acumulación que semanal, con su propio intervalo aproximado (30 días)", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          { ...MANUAL_BASE, recurring_frequency: "monthly", next_occurrence_date: "2026-01-01" },
+        ],
+      },
+      new Date("2026-03-05T00:00:00Z") // 63 días después -> floor(63/30)=2 -> overdueCount=3
+    );
+    expect(result[0].overdueCount).toBe(3);
+  });
+
+  it("quincenal (custom cada 15 días): mismo comportamiento, sin importar la frecuencia", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          {
+            ...MANUAL_BASE,
+            recurring_frequency: "custom",
+            recurring_interval_days: 15,
+            next_occurrence_date: "2026-02-01",
+          },
+        ],
+      },
+      new Date("2026-03-04T00:00:00Z") // 31 días después -> floor(31/15)=2 -> overdueCount=3
+    );
+    expect(result[0].overdueCount).toBe(3);
+  });
+
+  it("confirmar (avanzar next_occurrence_date un intervalo) reduce el conteo en uno, sin desaparecer si seguía atrasado", () => {
+    const before = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-02-19" }] },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(before[0].overdueCount).toBe(2);
+
+    const after = getUpcomingPayments(
+      { recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: "2026-02-26" }] }, // +7 días
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(after[0].overdueCount).toBe(1);
+  });
+
+  it("sin next_occurrence_date (dato incompleto) no genera el recordatorio", () => {
+    const result = getUpcomingPayments({
+      recurringTransactions: [{ ...MANUAL_BASE, next_occurrence_date: null }],
+    });
+    expect(result).toEqual([]);
+  });
+
+  it("respeta recurring_end_date ya vencido incluso siendo manual", () => {
+    const result = getUpcomingPayments(
+      {
+        recurringTransactions: [
+          { ...MANUAL_BASE, next_occurrence_date: "2026-03-01", recurring_end_date: "2026-02-01" },
+        ],
+      },
+      new Date("2026-03-01T00:00:00Z")
+    );
+    expect(result).toEqual([]);
   });
 });
 

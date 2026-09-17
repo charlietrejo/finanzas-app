@@ -58,7 +58,7 @@ export function TransactionsClient({ transactions, accounts, creditCards, catego
   // (evita el cascading render que marca react-hooks/set-state-in-effect).
   const [creating, setCreating] = useState(() => searchParams.get("new") === "1");
   const [editingId, setEditingId] = useState<string | null>(null);
-  // Secciones 3.2/3.4.1 del doc: el botón "Registrar ahora" del Dashboard
+  // Secciones 3.2/3.4.1 del doc: el botón "Marcar como pagada" del Dashboard
   // enlaza a /transactions?new=1&templateId=<id> — capturado una sola vez
   // al montar (mismo motivo que `creating`: el efecto de abajo limpia la
   // URL poco después, y no queremos que la plantilla desaparezca a medio
@@ -231,7 +231,7 @@ function TransactionForm({
   onDone: () => void;
 }) {
   const isEdit = !!transaction;
-  // Secciones 3.2/3.4.1 del doc: "Registrar ahora" abre este mismo formulario
+  // Secciones 3.2/3.4.1 del doc: "Marcar como pagada" abre este mismo formulario
   // prellenado (monto, categoría, cuenta) desde la plantilla recurrente
   // manual — crea un movimiento nuevo de una sola ocurrencia, no edita la
   // plantilla, así que solo se usa para los defaults, nunca como `isEdit`.
@@ -333,7 +333,7 @@ function TransactionForm({
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-ink">
           {isConfirm
-            ? `Registrar: ${confirmTemplate!.note || confirmTemplate!.category?.name || "movimiento recurrente"}`
+            ? `Marcar como pagada: ${confirmTemplate!.note || confirmTemplate!.category?.name || "movimiento recurrente"}`
             : isEdit
               ? "Editar movimiento"
               : "Nuevo movimiento"}
@@ -362,7 +362,7 @@ function TransactionForm({
           </Select>
         </div>
 
-        {/* Secciones 3.2/3.4.1 del doc: "Registrar ahora" crea un movimiento
+        {/* Secciones 3.2/3.4.1 del doc: "Marcar como pagada" crea un movimiento
             de una sola ocurrencia — nunca se vuelve a preguntar si es
             recurrente (la plantilla ya existe y sigue siendo la que manda). */}
         {type !== "transfer" && !isConfirm && (
@@ -486,13 +486,21 @@ function TransactionForm({
 
           <div>
             <Label htmlFor="date">Fecha</Label>
+            {/* Sección 3.4.1 del doc: "Marcar como pagada" confirma la
+                ocurrencia fechada en la next_occurrence_date que le
+                correspondía, NUNCA en la fecha real de hoy en que el
+                usuario confirma — por eso va fija (disabled, no editable)
+                solo en este modo, con un input oculto que sí se envía
+                (uno disabled no viaja en el FormData). */}
             <Input
               id="date"
-              name="date"
               type="date"
-              required
-              defaultValue={transaction?.date ?? new Date().toISOString().slice(0, 10)}
+              required={!isConfirm}
+              disabled={isConfirm}
+              name={isConfirm ? undefined : "date"}
+              defaultValue={isConfirm ? confirmTemplate!.next_occurrence_date ?? undefined : transaction?.date ?? new Date().toISOString().slice(0, 10)}
             />
+            {isConfirm && <input type="hidden" name="date" value={confirmTemplate!.next_occurrence_date ?? ""} />}
           </div>
         </div>
 

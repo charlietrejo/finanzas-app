@@ -11,11 +11,18 @@ export interface UpcomingPayment {
   dueDate: string;
   daysUntil: number;
   // Solo se llenan para source="recurring_transaction" (secciones 3.2/3.4.1
-  // del doc): templateId identifica la plantilla para el botón "Registrar
-  // ahora"; isAutomatic decide si ese botón se muestra (solo en manuales,
+  // del doc): templateId identifica la plantilla para el botón "Marcar como
+  // pagada"; isAutomatic decide si ese botón se muestra (solo en manuales,
   // false) o el recordatorio es puramente informativo (true).
   templateId?: string;
   isAutomatic?: boolean;
+  // Solo para recurrencias MANUALES (isAutomatic=false): pagos_atrasados =
+  // 1 + floor(daysLate / intervalo), sección 3.4.1 — 0 o negativo significa
+  // que todavía no vence (solo está dentro de la ventana de aviso de 3
+  // días); 1 = vence hoy o recién atrasado; 2+ = varios periodos sin
+  // confirmar acumulados, hay que mostrar el monto acumulado.
+  overdueCount?: number;
+  daysLate?: number;
 }
 
 function daysInMonth(year: number, monthIndex: number): number {
@@ -110,6 +117,32 @@ interface RecurringTransactionLike {
   // previos a esta columna — ausente se trata como automático (mismo
   // default que la columna en BD, ver 024_recurring_is_automatic.sql).
   recurring_is_automatic?: boolean;
+  // Solo se usa (y solo es obligatorio en la práctica) para plantillas
+  // MANUALES — sección 3.4.1: a diferencia de las automáticas (que se
+  // proyectan hacia adelante desde `date`, nunca se atrasan porque el cron
+  // las genera antes), una manual usa este valor tal cual está persistido,
+  // sin proyectarlo, para poder quedarse "atrás" y no saltarse al siguiente
+  // periodo solo porque ya pasó la fecha.
+  next_occurrence_date?: string | null;
+}
+
+/** Sección 3.4.1: "intervalo_en_días" de la fórmula de pagos atrasados — una
+ * aproximación simple a propósito (sin modelo calendario exacto para
+ * mensual/anual), consistente con el resto del doc ("sin necesitar un
+ * modelo estadístico complejo"). No se usa para calcular fechas reales
+ * (eso sigue siendo advanceRecurringDate, calendario-exacto) — solo para
+ * contar cuántos periodos completos ya pasaron. */
+function manualIntervalDays(frequency: RecurringFrequency, intervalDays: number | null): number {
+  switch (frequency) {
+    case "weekly":
+      return 7;
+    case "monthly":
+      return 30;
+    case "annual":
+      return 365;
+    case "custom":
+      return intervalDays ?? 1;
+  }
 }
 
 /**
@@ -163,8 +196,48 @@ export function getUpcomingPayments(
     }
   }
 
+  const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
   for (const tx of recurringTransactions) {
     if (!tx.recurring_frequency) continue;
+    const isManual = tx.recurring_is_automatic === false;
+
+    if (isManual) {
+      // Sección 3.4.1: usa next_occurrence_date tal cual — nunca se
+      // proyecta hacia adelante, para que una ocurrencia vencida se quede
+      // vencida (persistente) en vez de saltarse sola al siguiente periodo.
+      if (!tx.next_occurrence_date) continue;
+      const [y, m, d] = tx.next_occurrence_date.slice(0, 10).split("-").map(Number);
+      const due = new Date(Date.UTC(y, m - 1, d));
+      if (tx.recurring_end_date) {
+        const [ey, em, ed] = tx.recurring_end_date.slice(0, 10).split("-").map(Number);
+        const end = new Date(Date.UTC(ey, em - 1, ed));
+        if (due.getTime() > end.getTime()) continue;
+      }
+
+      const daysLate = Math.round((todayMidnight.getTime() - due.getTime()) / 86_400_000);
+      const interval = manualIntervalDays(tx.recurring_frequency, tx.recurring_interval_days);
+      const overdueCount = 1 + Math.floor(daysLate / interval);
+
+      const item = toUpcoming(
+        `recurring_transaction:${tx.id}`,
+        "recurring_transaction",
+        tx.note || "Movimiento recurrente",
+        tx.amount,
+        due,
+        today,
+        tx.id,
+        false
+      );
+      item.overdueCount = overdueCount;
+      item.daysLate = daysLate;
+      upcoming.push(item);
+      continue;
+    }
+
+    // Domiciliada/automática: sin cambios de comportamiento — el cron la
+    // genera antes de que se atrase, así que sigue teniendo sentido
+    // proyectar hacia adelante desde el ancla `date`.
     const next = nextRecurringDate(tx.date, tx.recurring_frequency, tx.recurring_interval_days, today);
     if (tx.recurring_end_date) {
       const [ey, em, ed] = tx.recurring_end_date.slice(0, 10).split("-").map(Number);
@@ -185,5 +258,12 @@ export function getUpcomingPayments(
     );
   }
 
-  return upcoming.filter((p) => p.daysUntil <= withinDays).sort((a, b) => a.daysUntil - b.daysUntil);
+  // Sección 3.4.1: los recordatorios manuales usan su PROPIA ventana fija
+  // de 3 días (nunca la ventana general withinDays) y, al no tener cota
+  // inferior, una vez vencidos se quedan visibles indefinidamente — solo
+  // desaparecen al confirmarse (avanza next_occurrence_date) o al llegar a
+  // 0 pagos pendientes.
+  return upcoming
+    .filter((p) => (p.source === "recurring_transaction" && p.isAutomatic === false ? p.daysUntil <= 3 : p.daysUntil <= withinDays))
+    .sort((a, b) => a.daysUntil - b.daysUntil);
 }

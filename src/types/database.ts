@@ -170,7 +170,7 @@ export type Transaction = {
   next_occurrence_date: string | null;
   // Secciones 3.2/3.4.1/Fase 8: solo tiene sentido si is_recurring=true.
   // true (domiciliado/automático) = el cron la genera sola. false (manual)
-  // = el cron la ignora, solo aparece como recordatorio "Registrar ahora"
+  // = el cron la ignora, solo aparece como recordatorio "Marcar como pagada"
   // en el Dashboard, y next_occurrence_date solo avanza cuando el usuario
   // confirma vía confirm_recurring_occurrence.
   recurring_is_automatic: boolean;
@@ -377,7 +377,7 @@ export interface Database {
         Returns: void;
       };
       // Secciones 3.2/3.4.1 del doc (024_recurring_is_automatic.sql): botón
-      // "Registrar ahora" del Dashboard, para confirmar a mano la ocurrencia
+      // "Marcar como pagada" del Dashboard, para confirmar a mano la ocurrencia
       // de una plantilla recurrente MANUAL. p_next_occurrence_date ya viene
       // calculado por el llamador (mismo patrón que generate_recurring_occurrence).
       confirm_recurring_occurrence: {

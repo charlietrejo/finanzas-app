@@ -191,7 +191,7 @@ export async function createLoanGiven(_prev: ActionState, formData: FormData): P
 }
 
 /**
- * Secciones 3.2/3.4.1 del doc: botón "Registrar ahora" del Dashboard, para
+ * Secciones 3.2/3.4.1 del doc: botón "Marcar como pagada" del Dashboard, para
  * confirmar a mano la ocurrencia de una plantilla recurrente MANUAL
  * (recurring_is_automatic=false) — crea la transacción real (is_recurring
  * =false) y avanza next_occurrence_date de la plantilla, de forma atómica
