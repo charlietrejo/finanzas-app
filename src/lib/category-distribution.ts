@@ -15,13 +15,17 @@ interface CategoryLike {
   name: string;
 }
 
-const OTHER_LABEL = "Otros";
+// No "Otros": este bucket es sintético (categoryId "__other__", nunca una
+// fila real de categories) y se confundía en la misma leyenda con la
+// categoría real "Otros gastos" (sección 3.8 del doc).
+const OTHER_LABEL = "Otras categorías";
 const MAX_SLICES_DEFAULT = 8;
 
 /**
  * Distribución de gastos por categoría (sección 3.6). Categorías más allá de
- * `maxSlices` (después de reservar una fila para "Otros") se agrupan, según
- * la regla de la skill dataviz: una 9ª serie nunca es un color generado.
+ * `maxSlices` (después de reservar una fila para "Otras categorías") se
+ * agrupan, según la regla de la skill dataviz: una 9ª serie nunca es un
+ * color generado.
  */
 export function computeCategoryDistribution(
   transactions: TransactionLike[],

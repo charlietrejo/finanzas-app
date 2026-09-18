@@ -33,7 +33,7 @@ describe("computeCategoryDistribution", () => {
     expect(result).toEqual([{ categoryId: "__uncategorized__", name: "Sin categoría", amount: 50 }]);
   });
 
-  it("agrupa categorías más allá del límite en 'Otros'", () => {
+  it("agrupa categorías más allá del límite en 'Otras categorías'", () => {
     const manyCategories = Array.from({ length: 10 }, (_, i) => ({ id: `c${i}`, name: `Cat ${i}` }));
     const transactions = manyCategories.map((c, i) => ({
       type: "expense" as const,
@@ -44,7 +44,7 @@ describe("computeCategoryDistribution", () => {
     const result = computeCategoryDistribution(transactions, manyCategories, 8);
 
     expect(result).toHaveLength(8);
-    expect(result[7].name).toBe("Otros");
+    expect(result[7].name).toBe("Otras categorías");
     // últimas 3 categorías (montos 8,7 -> índices 7,8,9 con montos 93,92,91... ajustado)
     const otherAmount = result[7].amount;
     const expectedOther = transactions
