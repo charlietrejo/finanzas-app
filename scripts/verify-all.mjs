@@ -117,6 +117,13 @@ const SUITES = [
   // EMAIL_A/EMAIL_B. Requiere SUPABASE_SERVICE_ROLE_KEY (Fase 8: la RPC que
   // prueba es security definer, solo invocable con ese rol).
   { name: "verify-recurring-cron.mjs", env: () => ({}) },
+  // Autosuficiente por el mismo motivo: necesita el service role key para
+  // simular al cron (generate_recurring_occurrence) además de un cliente
+  // autenticado normal.
+  { name: "verify-stop-recurring-template.mjs", env: () => ({}) },
+  // Autosuficiente (crea y borra su propio usuario) — no necesita service
+  // role: confirm_recurring_occurrence/delete_transaction son security invoker.
+  { name: "verify-delete-single-occurrence.mjs", env: () => ({}) },
 ];
 
 async function main() {
