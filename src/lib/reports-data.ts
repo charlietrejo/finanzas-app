@@ -10,6 +10,11 @@ export interface ReportsData {
   cashFlow: CashFlowPoint[];
   categoryDistribution: CategoryDistributionSlice[];
   netWorth: NetWorthPoint[];
+  // Sección 3.6 del doc (post-revisión): meses de historial REAL que se
+  // usaron para el promedio no-recurrente de la proyección — no siempre 6.
+  // La UI (ReportsClient) avisa cuando es poco (cuenta nueva, pocos meses
+  // de datos) para no leerse tan confiable como con 6 meses reales.
+  netWorthHistoryMonths: number;
   monthlyInsights: MonthlyInsights;
 }
 
@@ -63,7 +68,11 @@ export async function getReportsData(
     loansGiven,
     months,
   });
-  const netWorth = projectNetWorth(netWorthHistory, transactions, 6);
+  const { series: netWorth, effectiveHistoryMonths: netWorthHistoryMonths } = projectNetWorth(
+    netWorthHistory,
+    transactions,
+    6
+  );
 
   // Secciones 3.6/3.8: "del mes" es el mes en curso, no el rango de
   // tendencia (6/12/24) — reusa `transactions` (ya trae el historial
@@ -74,5 +83,5 @@ export async function getReportsData(
   );
   const monthlyInsights = computeMonthlyInsights(currentMonthTransactions, categories ?? []);
 
-  return { cashFlow, categoryDistribution, netWorth, monthlyInsights };
+  return { cashFlow, categoryDistribution, netWorth, netWorthHistoryMonths, monthlyInsights };
 }

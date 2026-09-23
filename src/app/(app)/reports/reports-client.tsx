@@ -17,7 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, Printer, Table2 } from "lucide-react";
+import { Download, Printer, Table2, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChartTooltip } from "@/components/charts/chart-tooltip";
@@ -33,7 +33,7 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
   const router = useRouter();
   const [showTable, setShowTable] = useState(false);
 
-  const { cashFlow, categoryDistribution, netWorth, monthlyInsights } = data;
+  const { cashFlow, categoryDistribution, netWorth, netWorthHistoryMonths, monthlyInsights } = data;
   const essentialPct =
     monthlyInsights.totalExpenses > 0
       ? Math.round((monthlyInsights.essentialExpenses / monthlyInsights.totalExpenses) * 100)
@@ -254,6 +254,19 @@ export function ReportsClient({ months, data }: { months: number; data: ReportsD
               Patrimonio neto y proyección
             </h2>
             <Card>
+              {/* Sección 3.6 del doc (post-revisión): con cuentas nuevas, el
+                  promedio no-recurrente de la proyección usa menos de los
+                  6 meses habituales (ver netWorthHistoryMonths, net-worth.ts)
+                  — avisa para que no se lea tan confiable como con historial
+                  completo. */}
+              {netWorthHistoryMonths < 3 && (
+                <div className="mb-3 flex items-start gap-2 rounded-badge bg-apricot/15 px-3 py-2 text-sm text-ink">
+                  <Info size={16} className="mt-0.5 shrink-0 text-amber-800 dark:text-amber-300" />
+                  <p>
+                    Proyección basada en poca información aún — se irá ajustando conforme registres más movimientos.
+                  </p>
+                </div>
+              )}
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={netWorthChartData}>
                   <CartesianGrid vertical={false} stroke="var(--color-mist)" />

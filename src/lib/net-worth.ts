@@ -1,4 +1,4 @@
-import { getLastMonths, getMonthRange, shiftMonth } from "@/lib/date-utils";
+import { getLastMonths, getMonthRange, monthDiff, shiftMonth } from "@/lib/date-utils";
 import { advanceRecurringDate } from "@/lib/recurring";
 import type { RecurringFrequency } from "@/types/database";
 
@@ -120,6 +120,15 @@ export interface ProjectionTransactionLike {
 // nunca llega) que de otro modo haría un while() casi infinito.
 const MAX_RECURRING_ITERATIONS = 1000;
 
+/** Resultado de {@link projectNetWorth}: la serie con la proyección anexada,
+ * más cuántos meses de historial REAL se usaron de verdad para el promedio
+ * (ver `effectiveHistoryMonths` más abajo) — para que la UI pueda avisar
+ * cuando la proyección está basada en poco historial todavía. */
+export interface NetWorthProjection {
+  series: NetWorthPoint[];
+  effectiveHistoryMonths: number;
+}
+
 /**
  * Proyección de balance futuro (sección 3.6 del doc) — ya no es un promedio
  * simple de los deltas históricos. Cada mes proyectado combina dos
@@ -136,6 +145,15 @@ const MAX_RECURRING_ITERATIONS = 1000;
  *    puntual (ej. una comisión bancaria olvidada durante meses) no es un
  *    patrón que deba proyectarse hacia adelante — sí afecta el saldo
  *    histórico real (computeNetWorthSeries), pero no la base del promedio.
+ *
+ *    El DIVISOR de ese promedio no es `historyMonths` a secas (post-revisión,
+ *    sección 3.6): con una cuenta nueva, dividir entre 6 meses fijos cuando
+ *    solo hay, digamos, 15 días de datos reales aplasta el promedio 6x hacia
+ *    cero (subestima). Por eso se usa `effectiveHistoryMonths` — los meses
+ *    REALES transcurridos desde la transacción no-recurrente más antigua
+ *    dentro de la ventana, con techo en `historyMonths` (nunca promedia más
+ *    atrás de lo pedido) y piso en 1 (dividir entre menos de 1 mes, ej. 0.5,
+ *    sobreestimaría igual de irreal en la dirección contraria).
  * 2) `recurrencias(mes)`: para cada plantilla activa (is_recurring=true),
  *    se avanza next_occurrence_date con advanceRecurringDate (mismo motor
  *    de Fase 8) ocurrencia por ocurrencia hasta el horizonte proyectado,
@@ -148,8 +166,8 @@ export function projectNetWorth(
   transactions: ProjectionTransactionLike[],
   monthsForward: number = 6,
   historyMonths: number = 6
-): NetWorthPoint[] {
-  if (series.length < 2) return series;
+): NetWorthProjection {
+  if (series.length < 2) return { series, effectiveHistoryMonths: historyMonths };
 
   const lastMonth = series[series.length - 1].month;
 
@@ -157,14 +175,26 @@ export function projectNetWorth(
   const historyWindow = getLastMonths(historyMonths, lastMonth);
   const { start: historyStart } = getMonthRange(historyWindow[0]);
   const { end: historyEnd } = getMonthRange(lastMonth);
-  const nonRecurringFlow = transactions
-    .filter((t) => !t.is_recurring && !t.is_adjustment && t.date >= historyStart && t.date < historyEnd)
-    .reduce((sum, t) => {
-      if (t.type === "income") return sum + t.amount;
-      if (t.type === "expense") return sum - t.amount;
-      return sum;
-    }, 0);
-  const avgNonRecurringFlow = nonRecurringFlow / historyMonths;
+  const nonRecurringTransactions = transactions.filter(
+    (t) => !t.is_recurring && !t.is_adjustment && t.date >= historyStart && t.date < historyEnd
+  );
+  const nonRecurringFlow = nonRecurringTransactions.reduce((sum, t) => {
+    if (t.type === "income") return sum + t.amount;
+    if (t.type === "expense") return sum - t.amount;
+    return sum;
+  }, 0);
+
+  const oldestNonRecurringDate = nonRecurringTransactions.reduce<string | null>(
+    (oldest, t) => (oldest === null || t.date < oldest ? t.date : oldest),
+    null
+  );
+  // Sin transacciones no-recurrentes en la ventana, nonRecurringFlow ya es 0
+  // — el divisor no cambia el resultado, pero igual se reporta 1 (nunca 0,
+  // nunca fraccionario) para que la UI de aviso tenga un número coherente.
+  const effectiveHistoryMonths = oldestNonRecurringDate
+    ? Math.max(1, Math.min(historyMonths, monthDiff(oldestNonRecurringDate.slice(0, 7), lastMonth) + 1))
+    : 1;
+  const avgNonRecurringFlow = nonRecurringFlow / effectiveHistoryMonths;
 
   // 2) Recurrencias activas, ocurrencia por ocurrencia hasta el horizonte.
   const futureMonths = Array.from({ length: monthsForward }, (_, i) => shiftMonth(lastMonth, i + 1));
@@ -202,5 +232,5 @@ export function projectNetWorth(
     projected.push({ month, netWorth: Math.round(lastValue * 100) / 100, projected: true });
   }
 
-  return [...series, ...projected];
+  return { series: [...series, ...projected], effectiveHistoryMonths };
 }

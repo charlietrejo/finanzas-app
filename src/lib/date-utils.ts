@@ -8,6 +8,13 @@ export function shiftMonth(month: string, delta: number): string {
   return date.toISOString().slice(0, 7);
 }
 
+/** Meses completos entre dos meses "YYYY-MM" (b − a). Negativo si b es anterior a a. */
+export function monthDiff(a: string, b: string): number {
+  const [ay, am] = a.split("-").map(Number);
+  const [by, bm] = b.split("-").map(Number);
+  return by * 12 + (bm - 1) - (ay * 12 + (am - 1));
+}
+
 export function getMonthRange(month: string): { start: string; end: string } {
   const [year, m] = month.split("-").map(Number);
   const start = `${month}-01`;

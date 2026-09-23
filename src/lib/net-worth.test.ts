@@ -115,7 +115,9 @@ function tx(overrides: Partial<ProjectionTransactionLike>): ProjectionTransactio
 describe("projectNetWorth", () => {
   it("devuelve la serie sin cambios si hay menos de 2 puntos", () => {
     const series = [{ month: "2026-01", netWorth: 1000, projected: false }];
-    expect(projectNetWorth(series, [], 3)).toEqual(series);
+    const result = projectNetWorth(series, [], 3);
+    expect(result.series).toEqual(series);
+    expect(result.effectiveHistoryMonths).toBe(6); // default de historyMonths, sin transacciones que lo acoten
   });
 
   it("combina el promedio no-recurrente con la recurrencia exacta de cada mes (Netflix mensual)", () => {
@@ -139,8 +141,10 @@ describe("projectNetWorth", () => {
       }),
     ];
 
-    const result = projectNetWorth(series, transactions, 2, 3);
+    const { series: result, effectiveHistoryMonths } = projectNetWorth(series, transactions, 2, 3);
 
+    // Los 3 meses de ingreso no-recurrente cubren exactamente los 3 pedidos -> sin diluir.
+    expect(effectiveHistoryMonths).toBe(3);
     expect(result).toHaveLength(5);
     // 1000 (saldo previo) + 1000 (promedio) - 200 (Netflix de abril) = 1800
     expect(result[3]).toEqual({ month: "2026-04", netWorth: 1800, projected: true });
@@ -165,7 +169,7 @@ describe("projectNetWorth", () => {
       }),
     ];
 
-    const result = projectNetWorth(series, transactions, 12, 3);
+    const { series: result } = projectNetWorth(series, transactions, 12, 3);
     const byMonth = Object.fromEntries(result.map((p) => [p.month, p.netWorth]));
 
     // Los 2 meses antes de la renovación no cambian (promedio=0, sin recurrencia todavía).
@@ -210,7 +214,7 @@ describe("projectNetWorth", () => {
       }),
     ];
 
-    const result = projectNetWorth(series, transactions, 1, 1);
+    const { series: result } = projectNetWorth(series, transactions, 1, 1);
 
     // Si los 300 recurrentes se hubieran restado del promedio, febrero daría 1400.
     // Al excluirlos, el promedio es solo el ingreso de 500.
@@ -229,10 +233,72 @@ describe("projectNetWorth", () => {
       tx({ type: "expense", amount: 300, date: "2026-01-12", is_adjustment: true }),
     ];
 
-    const result = projectNetWorth(series, transactions, 1, 1);
+    const { series: result } = projectNetWorth(series, transactions, 1, 1);
 
     // Si el ajuste se hubiera restado del promedio, febrero daría 1400.
     // Al excluirlo, el promedio es solo el ingreso de 500.
     expect(result[2]).toEqual({ month: "2026-02", netWorth: 1700, projected: true });
+  });
+
+  describe("divisor dinámico del promedio histórico (post-revisión: cuentas nuevas no deben diluirse entre 6 meses fijos)", () => {
+    it("con datos reales de solo 1 mes, divide entre 1 (no entre historyMonths=6) — no subestima", () => {
+      const series = [
+        { month: "2026-08", netWorth: 1000, projected: false },
+        { month: "2026-09", netWorth: 1000, projected: false },
+      ];
+      // Cuenta nueva: toda la actividad real cae dentro de septiembre, nada en agosto.
+      const transactions = [
+        tx({ type: "income", amount: 10000, date: "2026-09-09" }),
+        tx({ type: "expense", amount: 4000, date: "2026-09-14" }),
+      ];
+
+      const { series: result, effectiveHistoryMonths } = projectNetWorth(series, transactions, 1, 6);
+
+      expect(effectiveHistoryMonths).toBe(1);
+      // Flujo neto de septiembre: 10000 - 4000 = 6000. Con el bug (÷6) el
+      // promedio habría sido 1000; con el fix (÷1) es 6000 completo.
+      expect(result[2]).toEqual({ month: "2026-10", netWorth: 7000, projected: true });
+    });
+
+    it("piso de 1 mes: una transacción de hace unos días (mismo mes que hoy) da 1, nunca una fracción de mes", () => {
+      const series = [
+        { month: "2026-08", netWorth: 1000, projected: false },
+        { month: "2026-09", netWorth: 1000, projected: false },
+      ];
+      // Se calcula por mes calendario (no por días/30), así que esto nunca
+      // produce algo como 0.1 meses (que sobreestimaría el promedio 10x) —
+      // el Math.max(1, ...) explícito en el código es un respaldo aparte
+      // por si el cálculo alguna vez cambiara a algo fraccionario.
+      const transactions = [tx({ type: "income", amount: 5000, date: "2026-09-28" })];
+      const { effectiveHistoryMonths } = projectNetWorth(series, transactions, 1, 6);
+      expect(effectiveHistoryMonths).toBe(1);
+    });
+
+    it("con historial real que cubre toda la ventana pedida, effectiveHistoryMonths es exactamente historyMonths (nunca más, la ventana ya lo acota)", () => {
+      const series = [
+        { month: "2026-04", netWorth: 0, projected: false },
+        { month: "2026-06", netWorth: 0, projected: false },
+      ];
+      // Aunque haya actividad real desde mucho antes, nonRecurringTransactions
+      // ya viene acotado a la ventana de historyMonths (historyStart..historyEnd)
+      // — lo más viejo que puede aparecer ahí es justo el inicio de la ventana.
+      const transactions = [
+        tx({ type: "income", amount: 100, date: "2025-01-01" }), // fuera de la ventana, no cuenta
+        tx({ type: "income", amount: 100, date: "2026-04-01" }), // justo el inicio de la ventana de 3 meses
+        tx({ type: "income", amount: 100, date: "2026-06-01" }),
+      ];
+      const { effectiveHistoryMonths } = projectNetWorth(series, transactions, 1, 3);
+      expect(effectiveHistoryMonths).toBe(3);
+    });
+
+    it("sin transacciones no-recurrentes en la ventana, effectiveHistoryMonths es 1 y el promedio es 0 (no NaN/Infinity)", () => {
+      const series = [
+        { month: "2026-01", netWorth: 500, projected: false },
+        { month: "2026-02", netWorth: 500, projected: false },
+      ];
+      const { series: result, effectiveHistoryMonths } = projectNetWorth(series, [], 1, 6);
+      expect(effectiveHistoryMonths).toBe(1);
+      expect(result[2]).toEqual({ month: "2026-03", netWorth: 500, projected: true });
+    });
   });
 });
