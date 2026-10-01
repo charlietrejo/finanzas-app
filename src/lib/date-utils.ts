@@ -54,6 +54,31 @@ export function formatTodayLabel(): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function daysInCalendarMonth(year: number, monthIndex: number): number {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+/**
+ * Última fecha de corte (`cutoff_day`) ya ocurrida, en formato YYYY-MM-DD —
+ * sección 3.4: el periodo actual de una tarjeta de crédito va de su corte
+ * más reciente a hoy. Si el día de corte de este mes todavía no llega,
+ * regresa el del mes anterior (con el día recortado a los días reales de
+ * ese mes, ej. día 31 en febrero -> 28/29).
+ */
+export function getLastCutoffDate(cutoffDay: number, today: Date = new Date()): string {
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth();
+  const todayDay = today.getUTCDate();
+
+  const thisMonthCutoffDay = Math.min(cutoffDay, daysInCalendarMonth(year, month));
+  if (thisMonthCutoffDay <= todayDay) {
+    return new Date(Date.UTC(year, month, thisMonthCutoffDay)).toISOString().slice(0, 10);
+  }
+
+  const prevMonthCutoffDay = Math.min(cutoffDay, daysInCalendarMonth(year, month - 1));
+  return new Date(Date.UTC(year, month - 1, prevMonthCutoffDay)).toISOString().slice(0, 10);
+}
+
 export function daysBetween(a: string | Date, b: string | Date): number {
   const dateA = typeof a === "string" ? new Date(a) : a;
   const dateB = typeof b === "string" ? new Date(b) : b;

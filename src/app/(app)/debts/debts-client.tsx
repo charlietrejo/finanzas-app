@@ -16,7 +16,15 @@ import type { Account, Debt, DebtType } from "@/types/database";
 
 type Strategy = "none" | "snowball" | "avalanche";
 
-export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Account[] }) {
+export function DebtsClient({
+  debts,
+  accounts,
+  spentThisPeriod = {},
+}: {
+  debts: Debt[];
+  accounts: Account[];
+  spentThisPeriod?: Record<string, number>;
+}) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
@@ -91,6 +99,11 @@ export function DebtsClient({ debts, accounts }: { debts: Debt[]; accounts: Acco
                       {debt.payment_due_day ? ` · Día límite de pago: ${debt.payment_due_day}` : ""}
                       {debt.credit_limit != null ? ` · Límite: ${formatMXN(debt.credit_limit)}` : ""}
                     </p>
+                    {debt.type === "credit_card" && debt.cutoff_day && (
+                      <p className="mt-0.5 text-xs text-violet-text">
+                        Llevas {formatMXN(spentThisPeriod[debt.id] ?? 0)} gastados en este periodo
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <button
