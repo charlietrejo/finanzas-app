@@ -5,6 +5,7 @@ import { blobatar } from "blobatar";
 import { createClient } from "@/lib/supabase/server";
 import { NavLinks } from "@/components/navigation/nav-links";
 import { MobileNavBar } from "@/components/navigation/mobile-nav-bar";
+import { StickyBottom } from "@/components/navigation/sticky-bottom";
 import { RouteFade } from "@/components/navigation/route-fade";
 import { IosInstallHint } from "@/components/pwa/ios-install-hint";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -77,12 +78,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      <div
+      <StickyBottom
         className="fixed inset-x-0 bottom-0 border-t border-pebble bg-snow md:hidden print:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <MobileNavBar />
-      </div>
+      </StickyBottom>
     </div>
   );
 }
