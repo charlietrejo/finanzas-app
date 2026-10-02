@@ -58,6 +58,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#6161ff",
+  // Sin esto, el teclado virtual (ej. al abrir el selector de comercio,
+  // sección 3.8) solo encoge el visual viewport, no el layout viewport —
+  // el nav inferior (position: fixed, anclado al layout viewport) queda
+  // flotando mal ubicado mientras el teclado está abierto. "resizes-content"
+  // hace que el navegador encoja el layout viewport también, para que
+  // fixed/100vh recalculen contra el área realmente visible.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
