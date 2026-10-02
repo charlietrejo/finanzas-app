@@ -19,10 +19,10 @@ export const MEXICAN_BANKS: Bank[] = [
   { name: "Banco Azteca", color: "#00A651", domain: "bancoazteca.com.mx" },
   { name: "BanBajío", color: "#00549F", domain: "bb.com.mx" },
   { name: "Banregio", color: "#8DC63F", domain: "banregio.com" },
-  // Sin dominio comercial propio (portal gob.mx) — ver nota en la rama
-  // feature/bank-logos sobre el riesgo de que Logo.dev devuelva el logo
-  // genérico de Gobierno de México en vez del de Banco del Bienestar.
-  { name: "Banco del Bienestar", color: "#8B2942", domain: "gob.mx" },
+  // El dominio raíz "gob.mx" es rechazado por Logo.dev como dominio
+  // inválido (lo trata como sufijo público, no como marca) — hay que usar
+  // el subdominio propio del banco, que sí tiene logo real indexado.
+  { name: "Banco del Bienestar", color: "#8B2942", domain: "bienestar.gob.mx" },
   { name: "Nu México", color: "#820AD1", domain: "nu.com.mx" },
   { name: "Klar", color: "#111827", domain: "klar.mx" },
   { name: "Hey Banco", color: "#00E0B8", domain: "heybanco.com" },
