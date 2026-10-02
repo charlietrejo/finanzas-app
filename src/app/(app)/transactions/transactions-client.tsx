@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { MerchantLogo } from "@/components/ui/merchant-logo";
 import { formatMXN, formatDate } from "@/lib/format";
 import {
   createTransaction,
@@ -194,7 +195,8 @@ export function TransactionsClient({
                     )}
                     <span className="text-xs text-slate">{formatDate(t.date)}</span>
                   </div>
-                  <p className="truncate font-medium text-ink">
+                  <p className="flex items-center gap-1.5 truncate font-medium text-ink">
+                    {t.merchant?.name && <MerchantLogo name={t.merchant.name} size={16} />}
                     {t.merchant?.name ?? t.category?.name ?? TYPE_LABELS[t.type]}
                   </p>
                   <p className="truncate text-xs text-slate">
@@ -662,8 +664,9 @@ function TransactionForm({
                       <button
                         type="button"
                         onClick={() => selectMerchant(m)}
-                        className="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-periwinkle/50"
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink hover:bg-periwinkle/50"
                       >
+                        <MerchantLogo name={m.name} size={18} />
                         {m.name}
                       </button>
                     </li>
