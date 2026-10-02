@@ -8,7 +8,9 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatMXN } from "@/lib/format";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants/account-types";
-import { MEXICAN_BANKS } from "@/lib/constants/banks";
+import { BankSelect } from "@/components/ui/bank-select";
+import { BankLogo } from "@/components/ui/bank-logo";
+import { findBankByName } from "@/lib/logo-dev";
 import { adjustAccountBalance, createAccount, deleteAccount, updateAccount, type ActionState } from "./actions";
 import type { Account, AccountType } from "@/types/database";
 
@@ -56,7 +58,10 @@ export function AccountsClient({ accounts }: { accounts: Account[] }) {
                     <Badge tone="info">{ACCOUNT_TYPE_LABELS[account.type]}</Badge>
                     <p className="mt-2 font-medium text-ink">{account.name}</p>
                     {account.bank_name && (
-                      <p className="text-xs text-slate">{account.bank_name}</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-slate">
+                        <BankLogo bank={findBankByName(account.bank_name)} size={16} />
+                        {account.bank_name}
+                      </p>
                     )}
                   </div>
                   <div className="flex gap-1">
@@ -130,17 +135,7 @@ function CreateAccountForm({ onDone }: { onDone: () => void }) {
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="bank_name">Banco (opcional)</Label>
-          <Select id="bank_name" name="bank_name" defaultValue="">
-            <option value="">Sin banco / efectivo</option>
-            {MEXICAN_BANKS.map((bank) => (
-              <option key={bank.name} value={bank.name}>
-                {bank.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <BankSelect id="bank_name" label="Banco (opcional)" emptyLabel="Sin banco / efectivo" />
 
         <div>
           <Label htmlFor="initial_balance">Saldo inicial (MXN)</Label>
@@ -194,17 +189,12 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
           <Input id="edit_name" name="name" required defaultValue={account.name} />
         </div>
 
-        <div>
-          <Label htmlFor="edit_bank_name">Banco</Label>
-          <Select id="edit_bank_name" name="bank_name" defaultValue={account.bank_name ?? ""}>
-            <option value="">Sin banco / efectivo</option>
-            {MEXICAN_BANKS.map((bank) => (
-              <option key={bank.name} value={bank.name}>
-                {bank.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <BankSelect
+          id="edit_bank_name"
+          label="Banco"
+          defaultValue={account.bank_name ?? ""}
+          emptyLabel="Sin banco / efectivo"
+        />
 
         {state?.error && <p role="alert" className="text-sm text-danger-text">{state.error}</p>}
 

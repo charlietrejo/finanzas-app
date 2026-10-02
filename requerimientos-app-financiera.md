@@ -177,7 +177,9 @@ Hoy esta pantalla solo tiene el botón de cerrar sesión — se expande para ver
 ### 3.8 Catálogos precargados (México)
 
 **Bancos principales** (para nombrar/iconografiar cuentas y tarjetas, sin integración real):
-BBVA, Santander, Banorte, Citibanamex, HSBC, Scotiabank, Inbursa, Banco Azteca, BanBajío, Banregio, Banco del Bienestar, Nu México, Klar, Hey Banco (Banregio).
+BBVA, Santander, Banorte, Citibanamex, HSBC, Scotiabank, Inbursa, Banco Azteca, BanBajío, Banregio, Banco del Bienestar, Nu México, Klar, Hey Banco (Banregio), **Mercado Pago** (ya emite tarjeta de crédito propia en México, faltaba en el catálogo).
+
+**Logos reales (uso nominativo, identificación únicamente):** cada banco del catálogo se muestra con su logo real, obtenido vía **Logo.dev** (sucesor oficial de Clearbit Logo API, descontinuada en diciembre 2025) — su plan gratuito no exige atribución visible para proyectos personales/no comerciales, que es el caso de esta app. Los logos son solo para identificar visualmente de qué banco es cada cuenta/tarjeta — nunca implican patrocinio o afiliación con la institución.
 
 **Negocios/comercios comunes** (para autocompletar y sugerir categoría):
 - Supermercados: Walmart, Soriana, Chedraui, La Comer, Bodega Aurrerá

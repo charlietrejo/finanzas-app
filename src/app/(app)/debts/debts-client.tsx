@@ -8,7 +8,9 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatMXN } from "@/lib/format";
 import { DEBT_TYPE_LABELS, DEBT_TYPES } from "@/lib/constants/debt-types";
-import { MEXICAN_BANKS } from "@/lib/constants/banks";
+import { BankSelect } from "@/components/ui/bank-select";
+import { BankLogo } from "@/components/ui/bank-logo";
+import { findBankByName } from "@/lib/logo-dev";
 import { sortAvalanche, sortSnowball } from "@/lib/debt-strategy";
 import { buildAmortizationSchedule } from "@/lib/amortization";
 import { createDebt, createDebtPayment, deleteDebt, updateDebt, type ActionState } from "./actions";
@@ -92,7 +94,10 @@ export function DebtsClient({
                         {DEBT_TYPE_LABELS[debt.type]}
                       </Badge>
                     </div>
-                    <p className="mt-2 font-medium text-ink">{debt.name}</p>
+                    <p className="mt-2 flex items-center gap-1.5 font-medium text-ink">
+                      {debt.type === "credit_card" && <BankLogo bank={findBankByName(debt.bank_name)} size={18} />}
+                      {debt.name}
+                    </p>
                     <p className="text-xs text-slate">
                       Tasa anual: {debt.interest_rate}% · Pago mínimo: {formatMXN(debt.minimum_payment)}
                       {debt.due_day ? ` · Día de pago: ${debt.due_day}` : ""}
@@ -229,17 +234,7 @@ function CreateDebtForm({ onDone }: { onDone: () => void }) {
                 <Label htmlFor="credit_limit">Límite de crédito (MXN)</Label>
                 <Input id="credit_limit" name="credit_limit" type="number" step="0.01" min="0" />
               </div>
-              <div>
-                <Label htmlFor="bank_name">Banco (opcional)</Label>
-                <Select id="bank_name" name="bank_name" defaultValue="">
-                  <option value="">Sin banco</option>
-                  {MEXICAN_BANKS.map((bank) => (
-                    <option key={bank.name} value={bank.name}>
-                      {bank.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <BankSelect id="bank_name" label="Banco (opcional)" />
               <div>
                 <Label htmlFor="cutoff_day">Día de corte (opcional)</Label>
                 <Input id="cutoff_day" name="cutoff_day" type="number" min="1" max="31" />
@@ -332,17 +327,7 @@ function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
                   defaultValue={debt.credit_limit ?? ""}
                 />
               </div>
-              <div>
-                <Label htmlFor="edit_bank_name">Banco</Label>
-                <Select id="edit_bank_name" name="bank_name" defaultValue={debt.bank_name ?? ""}>
-                  <option value="">Sin banco</option>
-                  {MEXICAN_BANKS.map((bank) => (
-                    <option key={bank.name} value={bank.name}>
-                      {bank.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <BankSelect id="edit_bank_name" label="Banco" defaultValue={debt.bank_name ?? ""} />
               <div>
                 <Label htmlFor="edit_cutoff_day">Día de corte (opcional)</Label>
                 <Input
