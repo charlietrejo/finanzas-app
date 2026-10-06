@@ -68,7 +68,22 @@ export function TransactionsClient({
   // fecha) — no es un filtro client-side sobre `transactions`, porque una
   // plantilla vieja podría no estar entre los 200 movimientos más recientes.
   const [filter, setFilter] = useState<"all" | "recurring">("all");
-  const visibleTransactions = filter === "recurring" ? recurringTemplates : transactions;
+  const baseTransactions = filter === "recurring" ? recurringTemplates : transactions;
+  // Filtro por cuenta/tarjeta de origen (account_id o debt_id), combinable
+  // con "Todos"/"Recurrentes" de arriba (no lo reemplaza, se aplica encima).
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const sourceFilterOptions = useMemo(
+    () => [
+      ...accounts.map((a) => ({ value: `account:${a.id}`, label: a.name })),
+      ...creditCards.map((d) => ({ value: `debt:${d.id}`, label: `${d.name} (tarjeta)` })),
+    ],
+    [accounts, creditCards]
+  );
+  const visibleTransactions = useMemo(() => {
+    if (sourceFilter === "all") return baseTransactions;
+    const [kind, id] = sourceFilter.split(":");
+    return baseTransactions.filter((t) => (kind === "debt" ? t.debt_id === id : t.account_id === id));
+  }, [baseTransactions, sourceFilter]);
   // Sección 3.6.1 del doc: el botón central "+" del menú inferior enlaza a
   // /transactions?new=1 para abrir el formulario directo, sin pantalla
   // intermedia — inicializador perezoso, no un efecto que llame setState
@@ -143,26 +158,48 @@ export function TransactionsClient({
       {/* Sección 3.4.1 del doc ("Ver mis recurrencias de un vistazo"):
           responde "¿cuáles son mis gastos domiciliados?" sin tener que
           buscar entre el historial completo. */}
-      <div className="flex items-center gap-1">
-        {(["all", "recurring"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            className={
-              "min-h-11 rounded-pill px-4 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet " +
-              (filter === f ? "bg-monday-violet text-white" : "bg-pebble/40 text-slate hover:bg-pebble/60")
-            }
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1">
+          {(["all", "recurring"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={
+                "min-h-11 rounded-pill px-4 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-monday-violet " +
+                (filter === f ? "bg-monday-violet text-white" : "bg-pebble/40 text-slate hover:bg-pebble/60")
+              }
+            >
+              {f === "all" ? "Todos" : "Recurrentes"}
+            </button>
+          ))}
+        </div>
+
+        {sourceFilterOptions.length > 0 && (
+          <Select
+            aria-label="Filtrar por cuenta o tarjeta"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="w-auto"
           >
-            {f === "all" ? "Todos" : "Recurrentes"}
-          </button>
-        ))}
+            <option value="all">Todas las cuentas/tarjetas</option>
+            {sourceFilterOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
 
       {visibleTransactions.length === 0 && !creating ? (
         <Card>
           <p className="text-sm text-slate">
-            {filter === "recurring" ? "No tienes plantillas recurrentes." : "Aún no tienes movimientos registrados."}
+            {sourceFilter !== "all"
+              ? "No hay movimientos con ese filtro."
+              : filter === "recurring"
+                ? "No tienes plantillas recurrentes."
+                : "Aún no tienes movimientos registrados."}
           </p>
         </Card>
       ) : (
@@ -204,6 +241,7 @@ export function TransactionsClient({
                     {t.type === "transfer" && t.to_account ? ` → ${t.to_account.name}` : ""}
                     {t.category?.name && t.merchant?.name ? ` · ${t.category.name}` : ""}
                     {t.note ? ` · ${t.note}` : ""}
+                    {t.tags.length > 0 ? ` · ${t.tags.map((tag) => `#${tag}`).join(" ")}` : ""}
                   </p>
                 </div>
 
