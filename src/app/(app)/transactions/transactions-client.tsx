@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2, X, Repeat, Ban } from "lucide-react";
@@ -386,6 +386,20 @@ function TransactionForm({
   const [categoryId, setCategoryId] = useState<string>(prefillSource?.category_id ?? "");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [showMerchantList, setShowMerchantList] = useState(false);
+  const merchantFieldRef = useRef<HTMLDivElement>(null);
+
+  // Cierra el dropdown de comercio al hacer clic fuera de él (antes solo se
+  // cerraba seleccionando un comercio o con Escape).
+  useEffect(() => {
+    if (!showMerchantList) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (merchantFieldRef.current && !merchantFieldRef.current.contains(e.target as Node)) {
+        setShowMerchantList(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMerchantList]);
   const [isRecurring, setIsRecurring] = useState((transaction?.is_recurring ?? false) && type !== "transfer");
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>(
     transaction?.recurring_frequency ?? "monthly"
@@ -670,7 +684,7 @@ function TransactionForm({
 
         {type === "expense" && (
           <>
-            <div className="relative">
+            <div className="relative" ref={merchantFieldRef}>
               <Label htmlFor="merchant_search">Comercio (opcional)</Label>
               <Input
                 id="merchant_search"
